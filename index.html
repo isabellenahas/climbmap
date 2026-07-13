@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Climb Map — mapa de competências e planejamento de carreira." />
+  <title>Climb Map</title>
+  <link rel="stylesheet" href="assets/css/tokens.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+</head>
+<body>
+  <!-- Tela de entrada. O perfil fica armazenado somente no navegador. -->
+  <section id="entry-screen" class="entry-screen" aria-labelledby="entry-title">
+    <div class="entry-card">
+      <p class="eyebrow">CLIMB MAP</p>
+      <h1 id="entry-title">Seu mapa de crescimento profissional</h1>
+      <p class="muted">Entre com um nome único e um PIN. Nesta primeira versão, os dados ficam neste navegador.</p>
+
+      <form id="entry-form" class="stack" autocomplete="off">
+        <label>
+          Nome do perfil
+          <input id="profile-name" name="profileName" required maxlength="60" placeholder="Ex.: Isabelle" />
+        </label>
+        <label>
+          PIN
+          <input id="profile-pin" name="profilePin" required minlength="4" maxlength="12" inputmode="numeric" type="password" placeholder="4 a 12 números" />
+        </label>
+        <p id="entry-message" class="form-message" role="status"></p>
+        <button type="submit" class="button button-primary">Entrar ou criar perfil</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Aplicação principal. As telas são carregadas pelo roteador JavaScript. -->
+  <div id="app-shell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">CM</span>
+        <div>
+          <strong>Climb Map</strong>
+          <small>Mapa de carreira</small>
+        </div>
+      </div>
+
+      <nav id="main-navigation" class="navigation" aria-label="Navegação principal">
+        <button data-route="mapa" class="nav-item active">Meu Mapa</button>
+        <button data-route="catalogo" class="nav-item">Catálogo</button>
+        <button data-route="trilhas" class="nav-item">Trilhas</button>
+        <button data-route="planejamento" class="nav-item">Planejamento</button>
+        <button data-route="evolucao" class="nav-item">Evolução</button>
+        <button data-route="perfil" class="nav-item">Meu Perfil</button>
+        <button data-route="administracao" class="nav-item admin-only">Administração</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span id="current-user-name"></span>
+        <button id="logout-button" class="button button-ghost">Sair</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CLIMB MAP</p>
+          <h2 id="page-title">Meu Mapa</h2>
+        </div>
+        <button id="theme-toggle" class="button button-secondary" type="button">Alternar tema</button>
+      </header>
+
+      <section id="page-content" class="page-content" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
