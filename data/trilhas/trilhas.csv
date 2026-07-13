@@ -1,0 +1,4 @@
+trilha_id,nome,descricao,tipo,nivel_referencia,cor,icone,ordem,ativo,data_criacao,data_atualizacao,observacoes
+TRI001,Analista de BI,Trilha voltada para profissionais que atuam com analise e visualizacao de dados em Power BI.,cargo,intermediario,#FF6633,bar-chart,1,true,2024-02-10,2024-06-01,Trilha de teste tecnico.
+TRI002,Engenheiro de Dados,Trilha voltada para profissionais que atuam com modelagem e engenharia de dados.,cargo,intermediario,#3366FF,database,2,true,2024-02-10,2024-06-01,Trilha de teste tecnico.
+TRI003,Lider de Dados,Trilha voltada para profissionais que atuam na lideranca de times de dados.,cargo,lideranca,#33CC99,users,3,true,2024-02-10,2024-06-01,Trilha de teste tecnico.

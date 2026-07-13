@@ -1,0 +1,14 @@
+trilha_id,competencia_id,nivel_minimo_id,peso,obrigatorio,ordem,observacoes
+TRI001,COM005,NIV010,3,true,1,DAX e essencial para o analista de BI.
+TRI001,COM006,NIV013,2,true,2,Power Query e essencial para preparacao de dados.
+TRI001,COM007,NIV015,2,true,3,Modelagem no Power BI garante um modelo de dados solido.
+TRI001,COM008,NIV017,2,false,4,Storytelling reforca a comunicacao de insights.
+TRI001,COM009,NIV019,2,false,5,Design de dashboards melhora a entrega visual.
+TRI002,COM001,NIV001,2,true,1,Fundamentos de SQL sao a base do engenheiro de dados.
+TRI002,COM002,NIV004,3,true,2,Consultas avancadas sao usadas no dia a dia do engenheiro de dados.
+TRI002,COM003,NIV006,2,true,3,Modelagem dimensional e essencial para pipelines analiticos.
+TRI002,COM004,NIV008,2,false,4,Normalizacao de dados apoia o design de bancos transacionais.
+TRI003,COM010,NIV021,3,true,1,Gestao de feedback e central para lideranca de times.
+TRI003,COM008,NIV017,2,false,2,Storytelling apoia a comunicacao do lider com stakeholders.
+TRI003,COM009,NIV019,1,false,3,Design de dashboards ajuda o lider a interpretar resultados do time.
+TRI003,COM003,NIV006,1,false,4,Conhecimento basico de modelagem apoia decisoes tecnicas do lider.
