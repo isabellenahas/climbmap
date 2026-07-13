@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0.0",
+  "dataVersion": "0.1.0",
+  "publishedAt": null,
+  "source": "Google Sheets - exportacao manual em CSV",
+  "datasets": {
+    "categorias": {
+      "path": "data/catalogo/categorias.csv",
+      "idColumn": "categoria_id",
+      "requiredColumns": ["categoria_id", "nome", "ordem", "ativo"]
+    },
+    "dominios": {
+      "path": "data/catalogo/dominios.csv",
+      "idColumn": "dominio_id",
+      "requiredColumns": ["dominio_id", "categoria_id", "nome", "ordem", "ativo"]
+    },
+    "competencias": {
+      "path": "data/catalogo/competencias.csv",
+      "idColumn": "competencia_id",
+      "requiredColumns": ["competencia_id", "dominio_id", "nome", "peso", "ativo"]
+    },
+    "prerequisitos": {
+      "path": "data/catalogo/prerequisitos.csv",
+      "idColumn": null,
+      "requiredColumns": ["competencia_id", "competencia_prerequisito_id"]
+    },
+    "niveis": {
+      "path": "data/catalogo/niveis.csv",
+      "idColumn": "nivel_id",
+      "requiredColumns": ["nivel_id", "competencia_id", "nome", "ordem", "peso", "ativo"]
+    },
+    "recursos": {
+      "path": "data/catalogo/recursos.csv",
+      "idColumn": "recurso_id",
+      "requiredColumns": ["recurso_id", "nivel_id", "tipo_recurso_id", "nome", "ativo"]
+    },
+    "linksAlternativos": {
+      "path": "data/catalogo/links-alternativos.csv",
+      "idColumn": "link_id",
+      "requiredColumns": ["link_id", "recurso_id", "url", "ativo"]
+    },
+    "trilhas": {
+      "path": "data/trilhas/trilhas.csv",
+      "idColumn": "trilha_id",
+      "requiredColumns": ["trilha_id", "nome", "ativo"]
+    },
+    "trilhaCompetencias": {
+      "path": "data/trilhas/trilha-competencias.csv",
+      "idColumn": null,
+      "requiredColumns": ["trilha_id", "competencia_id", "nivel_minimo_id", "peso", "obrigatorio"]
+    },
+    "autoavaliacao": {
+      "path": "data/configuracoes/autoavaliacao.csv",
+      "idColumn": "autoavaliacao_id",
+      "requiredColumns": ["autoavaliacao_id", "nome", "valor", "ordem", "ativo"]
+    },
+    "tiposRecursos": {
+      "path": "data/configuracoes/tipos-recursos.csv",
+      "idColumn": "tipo_recurso_id",
+      "requiredColumns": ["tipo_recurso_id", "nome", "ativo"]
+    },
+    "status": {
+      "path": "data/configuracoes/status.csv",
+      "idColumn": "status_id",
+      "requiredColumns": ["status_id", "contexto", "nome", "ordem", "ativo"]
+    },
+    "complexidades": {
+      "path": "data/configuracoes/complexidades.csv",
+      "idColumn": "complexidade_id",
+      "requiredColumns": ["complexidade_id", "nome", "peso", "ordem", "ativo"]
+    },
+    "pesos": {
+      "path": "data/configuracoes/pesos.csv",
+      "idColumn": "peso_id",
+      "requiredColumns": ["peso_id", "chave", "valor", "ativo"]
+    }
+  }
+}

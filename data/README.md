@@ -1,18 +1,10 @@
-# Fontes de dados
+# Dados publicados do Climb Map
 
-Esta pasta será usada para os arquivos publicados pelo administrador a partir do Google Sheets.
+Esta pasta contém cópias CSV das bases administrativas mantidas no Google Sheets.
 
-O código da interface não deve depender diretamente das colunas das planilhas. Uma camada de adaptação será criada em `assets/js/services/` para validar e transformar os dados antes de apresentá-los.
+- `manifest.json`: contrato e índice dos datasets.
+- `catalogo/`: Categoria → Domínio → Competência → Nível → Recurso.
+- `trilhas/`: trilhas oficiais e suas competências.
+- `configuracoes/`: escalas, tipos, status, complexidades e pesos.
 
-Arquivos previstos:
-
-- categorias.csv
-- dominios.csv
-- competencias.csv
-- prerequisitos.csv
-- niveis.csv
-- recursos.csv
-- links_recursos.csv
-- trilhas.csv
-- trilhas_competencias.csv
-- configuracoes_*.csv
+Dados pessoais, PINs, progresso e planejamentos dos usuários não devem ser publicados nesta pasta.

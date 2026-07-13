@@ -2,6 +2,7 @@ import { enterProfile, currentUser, logout } from "./core/auth.js";
 import { loadState, saveState } from "./core/storage.js";
 import { initRouter } from "./core/router.js";
 import { renderRoute } from "./modules/views.js";
+import { dataService } from "./services/data-service.js";
 
 const entryScreen = document.querySelector("#entry-screen");
 const appShell = document.querySelector("#app-shell");
@@ -9,9 +10,13 @@ const content = document.querySelector("#page-content");
 
 initialize();
 
-function initialize() {
+async function initialize() {
   applyTheme(loadState().preferences.theme);
   bindGlobalActions();
+
+  // Carrega e valida todos os CSVs antes de abrir as telas.
+  await dataService.initialize();
+
   const user = currentUser();
   user ? openApplication(user) : openEntry();
 }
