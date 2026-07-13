@@ -1,0 +1,7 @@
+autoavaliacao_id,nome,descricao,valor,ordem,ativo
+AAV001,Sem nota,Usuario ainda nao avaliou este item.,0,1,true
+AAV002,Nunca vi,Usuario nunca teve contato com o conteudo.,1,2,true
+AAV003,Ouvi ou li,"Usuario ja ouviu falar ou leu sobre o assunto, mas nao praticou.",2,3,true
+AAV004,Experimentei,Usuario ja experimentou o conteudo na pratica algumas vezes.,3,4,true
+AAV005,Autonomo,Usuario consegue aplicar o conteudo de forma autonoma.,4,5,true
+AAV006,Ensino,Usuario domina o conteudo a ponto de ensinar outras pessoas.,5,6,true

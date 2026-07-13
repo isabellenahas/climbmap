@@ -1,0 +1,10 @@
+peso_id,chave,descricao,valor,unidade,ativo
+PES001,peso_autoavaliacao,Exemplo tecnico de peso aplicado a autoavaliacao. Nao representa a formula final do produto.,1,fator,true
+PES002,peso_padrao_curso,Exemplo tecnico de peso padrao para recursos do tipo curso. Nao representa a formula final do produto.,1,fator,true
+PES003,peso_padrao_certificacao,Exemplo tecnico de peso padrao para recursos do tipo certificacao. Nao representa a formula final do produto.,2,fator,true
+PES004,peso_padrao_projeto,Exemplo tecnico de peso padrao para recursos do tipo projeto. Nao representa a formula final do produto.,1.5,fator,true
+PES005,peso_padrao_documentacao,Exemplo tecnico de peso padrao para recursos do tipo documentacao oficial. Nao representa a formula final do produto.,0.5,fator,true
+PES006,peso_complexidade_iniciante,Exemplo tecnico de peso para complexidade iniciante. Nao representa a formula final do produto.,1,fator,true
+PES007,peso_complexidade_intermediaria,Exemplo tecnico de peso para complexidade intermediaria. Nao representa a formula final do produto.,2,fator,true
+PES008,peso_complexidade_avancada,Exemplo tecnico de peso para complexidade avancada. Nao representa a formula final do produto.,3,fator,true
+PES009,peso_complexidade_especialista,Exemplo tecnico de peso para complexidade especialista. Nao representa a formula final do produto.,4,fator,true
