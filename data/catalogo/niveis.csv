@@ -1,0 +1,23 @@
+nivel_id,competencia_id,nome,descricao,ordem,peso,autoavaliacao_maxima,obrigatorio,ativo,data_criacao,data_atualizacao,observacoes
+NIV001,COM001,Fundamentos,"Sintaxe basica de SELECT, WHERE e ordenacao de resultados.",1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV002,COM001,Consultas e Filtros,Filtragem avancada com operadores logicos e funcoes de texto.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV003,COM001,Agregacoes e Agrupamentos,"Uso de GROUP BY, HAVING e funcoes agregadas.",3,3,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV004,COM002,Subconsultas e Joins Avancados,"Joins multiplos, subconsultas correlacionadas e CTEs.",1,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV005,COM002,Otimizacao e Performance,"Indices, planos de execucao e escrita eficiente de consultas.",2,3,AAV006,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV006,COM003,Conceitos de Modelagem Dimensional,"Fatos, dimensoes e granularidade em modelos analiticos.",1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV007,COM003,Esquemas Estrela e Snowflake,Construcao pratica de esquemas estrela e snowflake.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV008,COM004,Formas Normais,"Primeira, segunda e terceira formas normais.",1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV009,COM004,Desnormalizacao Estrategica,Decisoes de desnormalizacao para performance analitica.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV010,COM005,Fundamentos de DAX,"Sintaxe basica, colunas calculadas e medidas simples.",1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV011,COM005,Funcoes de Contexto,"Contexto de linha, contexto de filtro e funcoes CALCULATE.",2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV012,COM005,Otimizacao de Medidas DAX,Boas praticas de performance para medidas complexas.,3,3,AAV006,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV013,COM006,Fundamentos de Power Query,Importacao de dados e transformacoes basicas.,1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV014,COM006,Transformacoes Avancadas,"Funcoes M, parametros e consultas dinamicas.",2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV015,COM007,Relacionamentos e Modelo de Dados,"Cardinalidade, direcao de filtro e tabelas de dimensao.",1,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV016,COM007,Modelagem Avancada e Seguranca,Row Level Security e organizacao de modelos complexos.,2,3,AAV006,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV017,COM008,Fundamentos de Storytelling,Estrutura basica de uma narrativa com dados.,1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV018,COM008,Narrativas com Dados,Construcao de apresentacoes com foco em tomada de decisao.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV019,COM009,Principios de Design de Dashboards,"Hierarquia visual, cores e layout de paineis.",1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV020,COM009,Usabilidade e Acessibilidade,Boas praticas de acessibilidade e usabilidade em paineis.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV021,COM010,Fundamentos de Feedback,Estrutura basica de uma conversa de feedback.,1,1,AAV004,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.
+NIV022,COM010,Feedback Continuo e Dificil,Condução de feedbacks recorrentes e conversas dificeis.,2,2,AAV005,true,true,2024-01-20,2024-06-01,Nivel de teste tecnico.

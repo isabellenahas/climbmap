@@ -1,0 +1,6 @@
+dominio_id,categoria_id,nome,descricao,icone,cor,ordem,ativo,data_criacao,data_atualizacao,observacoes
+DOM001,CAT001,SQL,"Consultas, manipulacao e extracao de dados em bancos relacionais.",code,#3366FF,1,true,2024-01-12,2024-06-01,Dominio de teste tecnico.
+DOM002,CAT001,Modelagem de Dados,Estruturacao logica e fisica de dados para analise e armazenamento.,layers,#3366CC,2,true,2024-01-12,2024-06-01,Dominio de teste tecnico.
+DOM003,CAT002,Power BI,Ferramenta de business intelligence da Microsoft para analise e visualizacao de dados.,bar-chart,#FF6633,1,true,2024-01-12,2024-06-01,Dominio de teste tecnico.
+DOM004,CAT002,Visualizacao de Dados,Principios e praticas de construcao de graficos e dashboards eficazes.,pie-chart,#FF9933,2,true,2024-01-12,2024-06-01,Dominio de teste tecnico.
+DOM005,CAT003,Lideranca de Times,"Gestao, desenvolvimento e acompanhamento de equipes de dados.",users,#33CC99,1,true,2024-01-12,2024-06-01,Dominio de teste tecnico.

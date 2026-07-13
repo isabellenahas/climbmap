@@ -1,0 +1,4 @@
+categoria_id,nome,descricao,icone,cor,ordem,ativo,data_criacao,data_atualizacao,observacoes
+CAT001,Dados,Competencias tecnicas relacionadas a bancos de dados e engenharia de dados.,database,#3366FF,1,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
+CAT002,Dataviz,Competencias relacionadas a visualizacao e apresentacao de dados.,chart,#FF6633,2,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
+CAT003,Lideranca e Gestao,Competencias comportamentais e de gestao de pessoas e times.,users,#33CC99,3,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
