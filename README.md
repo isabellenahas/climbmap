@@ -1,13 +1,5 @@
-# Climb Map — Patch Sprint 2.1
+# Climb Map — atualização Sprint 2.2
 
-Atualização incremental para acompanhamento de trilhas oficiais, cálculo de progresso e inclusão de lacunas no planejamento.
+Patch para planejamento e autoavaliação por nível de competência.
 
-## Upload
-
-Envie para a raiz do repositório:
-
-- `assets/`
-- `docs/`
-- `index.html`
-
-A pasta `data/` não é alterada.
+Envie `assets`, `docs`, `index.html` e `README.md` para a raiz do repositório. A pasta `data` não faz parte deste patch.

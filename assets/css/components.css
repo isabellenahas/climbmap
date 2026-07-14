@@ -383,3 +383,20 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
     flex-direction: column;
   }
 }
+
+/* Sprint 2.2 — planejamento e notas por nível */
+.metric-card-link { color: inherit; text-decoration: none; transition: transform .15s ease, border-color .15s ease; }
+.metric-card-link:hover { transform: translateY(-2px); border-color: var(--primary); }
+.secondary-metrics { margin-top: 1rem; }
+.catalog-competency-details { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.catalog-competency-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; cursor: pointer; }
+.catalog-competency-title { display: block; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+.catalog-competency-title:hover { color: var(--primary); text-decoration: underline; }
+.catalog-competency-preview { display: grid; gap: .45rem; padding: 0 1rem 1rem; }
+.catalog-competency-preview > div { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); }
+.competency-summary-panel { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.level-content { display: grid; gap: 1rem; padding-top: 1rem; }
+.level-controls { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+.level-summary-score { color: var(--muted); font-size: .9rem; }
+.admin-health-section { margin-top: 2rem; }
+@media (max-width: 760px) { .level-controls, .competency-summary-panel { grid-template-columns: 1fr; } .catalog-competency-details > summary { align-items: flex-start; flex-direction: column; } }
