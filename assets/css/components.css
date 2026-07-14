@@ -1,0 +1,166 @@
+/* Componentes reutilizáveis. */
+.button { border: 0; border-radius: var(--radius-sm); padding: 11px 15px; font-weight: 750; }
+.button-primary { background: var(--primary); color: white; }
+.button-primary:hover { background: var(--primary-strong); }
+.button-secondary { background: var(--surface-2); color: var(--text); }
+.button-ghost { background: transparent; color: var(--muted); padding-inline: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-5); box-shadow: var(--shadow); }
+.card h3 { margin-top: 0; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+.metric-value { display: block; margin-top: var(--space-2); font-size: 1.9rem; font-weight: 850; }
+.section-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--space-5); margin-top: var(--space-5); }
+.progress { height: 10px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+.progress > span { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.empty-state { text-align: center; padding: var(--space-7); color: var(--muted); }
+.form-message { min-height: 20px; margin: 0; color: var(--muted); }
+.data-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
+
+/* Componentes usados pela camada de dados e pelo catálogo. */
+.catalog-indent { margin: 1rem 0 0 1rem; }
+.catalog-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--border); }
+.category-progress { display: grid; gap: .45rem; margin-top: 1rem; }
+.category-progress > div:first-child { display: flex; justify-content: space-between; gap: 1rem; }
+.progress-track { height: .6rem; overflow: hidden; border-radius: 999px; background: var(--surface-muted); }
+.progress-track span { display: block; height: 100%; background: var(--accent); }
+.data-table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.data-table th, .data-table td { padding: .75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.status-badge { display: inline-flex; padding: .2rem .5rem; border-radius: 999px; font-size: .78rem; text-transform: uppercase; background: var(--surface-muted); }
+.status-ready { color: var(--success, #137333); }
+.status-error { color: var(--danger, #b3261e); }
+
+/* Detalhes da competência: janela modal criada pela tela de Catálogo. */
+.competency-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+
+.competency-dialog::backdrop {
+  background: rgb(15 23 42 / 62%);
+  backdrop-filter: blur(3px);
+}
+
+.competency-dialog-card {
+  padding: 28px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.competency-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.icon-button {
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.level-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.level-details > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  cursor: pointer;
+}
+
+.level-details > summary span:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.level-details > summary small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.resource-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+
+.resource-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.resource-card h4 {
+  margin: 4px 0;
+}
+
+.resource-type {
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--primary);
+}
+
+@media (max-width: 680px) {
+  .competency-dialog-card { padding: 20px; }
+  .resource-card { align-items: stretch; flex-direction: column; }
+}
+
+/* Sprint 1 — componentes e filtros reutilizáveis. */
+.metric-card { display: grid; align-content: start; min-height: 132px; }
+.metric-card small { margin-top: .35rem; }
+.section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.empty-state.compact { padding: 1.25rem; }
+.inline-badges { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.progress-component { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .75rem; }
+.catalog-filter-card { margin-bottom: var(--space-5); }
+.catalog-toolbar { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(150px, 1fr)) auto; gap: var(--space-3); align-items: end; }
+.search-field, .filter-field { display: grid; gap: .4rem; color: var(--muted); font-size: .86rem; font-weight: 700; }
+.search-field input, .filter-field select { width: 100%; min-height: 44px; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; }
+.domain-details { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.domain-details > summary { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; cursor: pointer; background: var(--surface-2); }
+.domain-details > summary span:first-child { display: grid; gap: .25rem; }
+.domain-details > summary small { color: var(--muted); font-weight: 400; }
+.trail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.trail-card { display: flex; flex-direction: column; min-height: 230px; }
+.trail-card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.evolution-card { margin-top: var(--space-5); }
+.status-neutral { color: var(--muted); }
+
+@media (max-width: 1180px) {
+  .catalog-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .catalog-toolbar, .trail-grid { grid-template-columns: 1fr; }
+}
