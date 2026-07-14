@@ -62,8 +62,56 @@ class BusinessEngine {
   }
 
   getTrailScore(trailId) {
-    const links = dataService.getAll("trilhaCompetencias").filter(link => link.trilha_id === trailId);
-    return aggregateScores(links.map(link => this.getCompetencyScore(link.competencia_id)));
+    return this.getTrailAnalysis(trailId)?.score ?? aggregateScores([]);
+  }
+
+  /**
+   * Entrega o retrato completo de uma trilha: progresso, competências e lacunas.
+   * Nesta versão, lacuna significa uma competência da trilha que ainda não chegou a 100%.
+   * A regra final de aderência ao nível mínimo será refinada quando a fórmula oficial for fechada.
+   */
+  getTrailAnalysis(trailId) {
+    const trail = dataService.getById("trilhas", trailId);
+    if (!trail) return null;
+
+    const links = dataService.getAll("trilhaCompetencias")
+      .filter(link => link.trilha_id === trailId)
+      .sort(byOrder);
+
+    const competencies = links.map(link => {
+      const competency = dataService.getById("competencias", link.competencia_id);
+      const minimumLevel = dataService.getById("niveis", link.nivel_minimo_id);
+      const score = this.getCompetencyScore(link.competencia_id);
+      return {
+        ...link,
+        competency,
+        minimumLevel,
+        score,
+        gap: Math.max(0, 100 - score.percentage)
+      };
+    }).filter(item => item.competency);
+
+    const score = aggregateScores(competencies.map(item => item.score));
+    const gaps = [...competencies]
+      .filter(item => item.score.percentage < 100)
+      .sort((a, b) => {
+        const requiredDifference = Number(b.obrigatorio !== false) - Number(a.obrigatorio !== false);
+        return requiredDifference || b.gap - a.gap || byOrder(a, b);
+      });
+
+    return {
+      trail,
+      score,
+      competencies,
+      gaps,
+      completed: competencies.filter(item => item.score.percentage >= 100).length,
+      total: competencies.length
+    };
+  }
+
+  getSelectedTrailAnalysis() {
+    const selectedTrailId = userDataService.getSelectedTrailId();
+    return selectedTrailId ? this.getTrailAnalysis(selectedTrailId) : null;
   }
 
   getDashboard() {
@@ -75,6 +123,7 @@ class BusinessEngine {
     return {
       general: this.getGeneralScore(),
       categories: categories.map(category => ({ ...category, score: this.getCategoryScore(category.categoria_id) })),
+      selectedTrail: this.getSelectedTrailAnalysis(),
       assessedCompetencies: userData.competencyProgress.filter(item => item.assessmentId).length,
       completedResources: userData.resourceProgress.filter(item => item.status === "concluido").length,
       favorites: userData.favorites.length,

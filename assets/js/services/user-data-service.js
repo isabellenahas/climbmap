@@ -72,6 +72,37 @@ class UserDataService {
     return this.getCurrentUserData().planItems;
   }
 
+  /** Define a trilha oficial que o usuário decidiu acompanhar no momento. */
+  setSelectedTrail(trailId) {
+    return this.updateUserData(data => {
+      data.selectedTrailId = trailId || "";
+      data.selectedTrailUpdatedAt = new Date().toISOString();
+    });
+  }
+
+  getSelectedTrailId() {
+    return this.getCurrentUserData().selectedTrailId;
+  }
+
+  /** Adiciona várias competências ao planejamento sem duplicar registros. */
+  addCompetenciesToPlanning(competencyIds, status = "interesse") {
+    const uniqueIds = [...new Set((competencyIds || []).filter(Boolean))];
+    return this.updateUserData(data => {
+      uniqueIds.forEach(competencyId => {
+        const item = upsert(data.planItems, "competencyId", competencyId, {
+          competencyId,
+          status,
+          priority: 0,
+          targetDate: "",
+          notes: "",
+          updatedAt: null
+        });
+        item.status = item.status || status;
+        item.updatedAt = new Date().toISOString();
+      });
+    });
+  }
+
   setResourceStatus(resourceId, status) {
     return this.updateUserData(data => {
       const item = upsert(data.resourceProgress, "resourceId", resourceId, {
@@ -87,6 +118,7 @@ class UserDataService {
       item.status = status;
       if (status === "estudando" && !item.startedAt) item.startedAt = new Date().toISOString();
       if (status === "concluido") item.completedAt = new Date().toISOString();
+      if (status !== "concluido") item.completedAt = "";
       item.updatedAt = new Date().toISOString();
     });
   }
@@ -123,7 +155,9 @@ function normalizeUserData(data) {
     resourceProgress: Array.isArray(data.resourceProgress) ? data.resourceProgress : [],
     plans: Array.isArray(data.plans) ? data.plans : [],
     planItems: Array.isArray(data.planItems) ? data.planItems : [],
-    favorites: Array.isArray(data.favorites) ? data.favorites : []
+    favorites: Array.isArray(data.favorites) ? data.favorites : [],
+    selectedTrailId: typeof data.selectedTrailId === "string" ? data.selectedTrailId : "",
+    selectedTrailUpdatedAt: data.selectedTrailUpdatedAt ?? null
   };
 }
 

@@ -1,11 +1,13 @@
-# Correção Sprint 2
+# Climb Map — Patch Sprint 2.1
 
-Patch corretivo para garantir que a versão nova de `views.js` seja publicada e que o navegador não use arquivos antigos em cache.
+Atualização incremental para acompanhamento de trilhas oficiais, cálculo de progresso e inclusão de lacunas no planejamento.
 
-Arquivos incluídos:
+## Upload
+
+Envie para a raiz do repositório:
+
+- `assets/`
+- `docs/`
 - `index.html`
-- `assets/js/app.js`
-- `assets/js/modules/views.js`
-- `assets/js/business/business-engine.js`
-- `assets/js/services/user-data-service.js`
-- `assets/css/components.css`
+
+A pasta `data/` não é alterada.

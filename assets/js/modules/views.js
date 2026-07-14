@@ -24,6 +24,7 @@ export function renderRoute(route, container) {
 }
 
 function bindRouteActions(route, container) {
+  if (route === "mapa") bindMapActions(container);
   if (route === "perfil") bindProfileActions(container);
   if (route === "catalogo") bindCatalogActions(container);
   if (route === "trilhas") bindTrailActions(container);
@@ -32,6 +33,7 @@ function bindRouteActions(route, container) {
 
 function renderMap() {
   const dashboard = businessEngine.getDashboard();
+  const selectedTrail = dashboard.selectedTrail;
 
   return `
     <div class="metric-grid">
@@ -40,20 +42,82 @@ function renderMap() {
       ${ui.metric("No planejamento", String(dashboard.planningItems), "Competências selecionadas")}
       ${ui.metric("Favoritos", String(dashboard.favorites), "Competências salvas")}
     </div>
+
+    ${selectedTrail ? `
+      <section class="card trail-focus-card">
+        <div class="trail-focus-header">
+          <div>
+            <p class="eyebrow">TRILHA ACOMPANHADA</p>
+            <h3>${escapeHtml(selectedTrail.trail.nome)}</h3>
+            <p class="muted">${escapeHtml(selectedTrail.trail.descricao || "")}</p>
+          </div>
+          <strong class="trail-focus-percentage">${selectedTrail.score.percentage}%</strong>
+        </div>
+        ${ui.progress(selectedTrail.score.percentage, `${selectedTrail.trail.nome}: ${selectedTrail.score.percentage}%`)}
+        <div class="trail-focus-meta">
+          <span>${selectedTrail.completed} de ${selectedTrail.total} competências completas</span>
+          <span>${selectedTrail.gaps.length} lacuna(s) atual(is)</span>
+        </div>
+        <div class="trail-gap-list">
+          ${selectedTrail.gaps.slice(0, 4).map(item => `
+            <article class="trail-gap-item">
+              <div>
+                <strong>${escapeHtml(item.competency.nome)}</strong>
+                <p class="muted">Nível de referência: ${escapeHtml(item.minimumLevel?.nome || "Não informado")}</p>
+              </div>
+              <div class="trail-gap-progress">
+                <span>${item.score.percentage}%</span>
+                ${ui.progress(item.score.percentage, `${item.competency.nome}: ${item.score.percentage}%`)}
+              </div>
+              <button class="button button-secondary map-open-competency" data-competency-id="${escapeAttribute(item.competency.competencia_id)}" type="button">Abrir</button>
+            </article>`).join("") || '<div class="empty-state compact">Nenhuma lacuna nesta trilha.</div>'}
+        </div>
+        <div class="quick-actions">
+          <button id="map-add-trail-gaps" class="button button-primary" type="button">Adicionar lacunas ao planejamento</button>
+          <a class="button button-secondary" href="#/trilhas">Ver todas as trilhas</a>
+        </div>
+        <p id="map-trail-message" class="form-message" role="status"></p>
+      </section>` : `
+      <section class="card trail-empty-card">
+        <div>
+          <p class="eyebrow">MEU CAMINHO</p>
+          <h3>Escolha uma trilha para acompanhar</h3>
+          <p class="muted">A trilha não altera o catálogo. Ela organiza a comparação entre seu progresso atual e as competências cadastradas pelo administrador.</p>
+        </div>
+        <a class="button button-primary" href="#/trilhas">Escolher trilha</a>
+      </section>`}
+
     <div class="section-grid">
       ${ui.card(`
         <div class="section-heading"><div><p class="eyebrow">VISÃO GERAL</p><h3>Mapa macro</h3></div></div>
         ${dashboard.categories.length ? dashboard.categories.map(category => categoryBar(category, category.score.percentage)).join("") : '<div class="empty-state">Nenhuma categoria publicada.</div>'}
       `)}
       ${ui.card(`
-        <div class="section-heading"><div><p class="eyebrow">COMECE POR AQUI</p><h3>Primeiros passos</h3></div></div>
-        <p class="muted">Abra uma competência no Catálogo, informe sua autoavaliação e adicione o que deseja estudar ao Planejamento.</p>
+        <div class="section-heading"><div><p class="eyebrow">PRÓXIMAS AÇÕES</p><h3>Continue sua jornada</h3></div></div>
+        <p class="muted">Avalie competências, acompanhe uma trilha oficial e organize suas prioridades no planejamento individual.</p>
         <div class="quick-actions">
           <a class="button button-primary" href="#/catalogo">Avaliar competências</a>
           <a class="button button-secondary" href="#/planejamento">Abrir planejamento</a>
         </div>
       `)}
     </div>`;
+}
+
+function bindMapActions(container) {
+  container.querySelectorAll(".map-open-competency").forEach(button => {
+    button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId));
+  });
+
+  container.querySelector("#map-add-trail-gaps")?.addEventListener("click", () => {
+    const analysis = businessEngine.getSelectedTrailAnalysis();
+    if (!analysis) return;
+    userDataService.addCompetenciesToPlanning(
+      analysis.gaps.map(item => item.competency.competencia_id),
+      "interesse"
+    );
+    const message = container.querySelector("#map-trail-message");
+    if (message) message.textContent = `${analysis.gaps.length} competência(s) adicionada(s) ao planejamento.`;
+  });
 }
 function renderCatalog() {
   const filters = stateManager.get("catalogFilters");
@@ -267,31 +331,61 @@ function openCompetencyDetails(competencyId) {
 }
 function renderTrails() {
   const trails = dataService.getAll("trilhas", { activeOnly: true }).sort(byOrder);
-  const links = dataService.getAll("trilhaCompetencias");
+  const selectedTrailId = userDataService.getSelectedTrailId();
   if (!trails.length) return ui.empty("Nenhuma trilha oficial publicada.");
 
-  return `<div class="trail-grid">${trails.map(trail => {
-    const linkedCompetencies = links.filter(link => link.trilha_id === trail.trilha_id);
-    return ui.card(`
-      <p class="eyebrow">TRILHA OFICIAL</p>
-      <h3>${escapeHtml(trail.nome)}</h3>
-      <p class="muted">${escapeHtml(trail.descricao || "")}</p>
-      <div class="trail-card-footer"><span>${linkedCompetencies.length} competências</span><button class="button button-secondary trail-details-button" data-trail-id="${escapeAttribute(trail.trilha_id)}">Ver trilha</button></div>
-    `, "trail-card");
-  }).join("")}</div>`;
+  return `
+    <div class="section-heading trails-heading">
+      <div>
+        <p class="eyebrow">TRILHAS OFICIAIS</p>
+        <h3>Escolha uma referência para acompanhar</h3>
+        <p class="muted">Acompanhar uma trilha não muda sua matriz. Apenas destaca progresso e lacunas dentro desse recorte.</p>
+      </div>
+    </div>
+    <div class="trail-grid">${trails.map(trail => {
+      const analysis = businessEngine.getTrailAnalysis(trail.trilha_id);
+      const selected = trail.trilha_id === selectedTrailId;
+      return ui.card(`
+        <div class="trail-card-topline">
+          <p class="eyebrow">${selected ? "TRILHA ACOMPANHADA" : "TRILHA OFICIAL"}</p>
+          ${selected ? ui.badge("Acompanhando", "ready") : ""}
+        </div>
+        <h3>${escapeHtml(trail.nome)}</h3>
+        <p class="muted">${escapeHtml(trail.descricao || "")}</p>
+        <div class="trail-card-progress">
+          <div><span>Progresso atual</span><strong>${analysis?.score.percentage ?? 0}%</strong></div>
+          ${ui.progress(analysis?.score.percentage ?? 0, `${trail.nome}: ${analysis?.score.percentage ?? 0}%`)}
+        </div>
+        <div class="trail-card-footer">
+          <span>${analysis?.total ?? 0} competências</span>
+          <div class="trail-card-actions">
+            <button class="button button-secondary trail-details-button" data-trail-id="${escapeAttribute(trail.trilha_id)}">Ver trilha</button>
+            <button class="button ${selected ? "button-secondary" : "button-primary"} trail-select-button" data-trail-id="${escapeAttribute(trail.trilha_id)}" type="button">${selected ? "Deixar de acompanhar" : "Acompanhar"}</button>
+          </div>
+        </div>
+      `, `trail-card ${selected ? "trail-card-selected" : ""}`);
+    }).join("")}</div>`;
 }
 
 function bindTrailActions(container) {
   container.querySelectorAll(".trail-details-button").forEach(button => {
     button.addEventListener("click", () => openTrailDetails(button.dataset.trailId));
   });
+
+  container.querySelectorAll(".trail-select-button").forEach(button => {
+    button.addEventListener("click", () => {
+      const current = userDataService.getSelectedTrailId();
+      userDataService.setSelectedTrail(current === button.dataset.trailId ? "" : button.dataset.trailId);
+      renderRoute("trilhas", container);
+    });
+  });
 }
 
 function openTrailDetails(trailId) {
-  const trail = dataService.getById("trilhas", trailId);
-  const links = dataService.getAll("trilhaCompetencias").filter(link => link.trilha_id === trailId).sort(byOrder);
-  if (!trail) return;
+  const analysis = businessEngine.getTrailAnalysis(trailId);
+  if (!analysis) return;
 
+  const selected = userDataService.getSelectedTrailId() === trailId;
   document.querySelector("#trail-dialog")?.remove();
   const dialog = document.createElement("dialog");
   dialog.id = "trail-dialog";
@@ -299,18 +393,87 @@ function openTrailDetails(trailId) {
   dialog.innerHTML = `
     <article class="competency-dialog-card stack">
       <header class="competency-dialog-header">
-        <div><p class="eyebrow">TRILHA OFICIAL</p><h2>${escapeHtml(trail.nome)}</h2><p class="muted">${escapeHtml(trail.descricao || "")}</p></div>
+        <div>
+          <p class="eyebrow">TRILHA OFICIAL</p>
+          <h2>${escapeHtml(analysis.trail.nome)}</h2>
+          <p class="muted">${escapeHtml(analysis.trail.descricao || "")}</p>
+        </div>
         <button class="icon-button" type="button" data-close-dialog aria-label="Fechar trilha">×</button>
       </header>
+
+      <section class="trail-dialog-summary">
+        <div>
+          <span class="muted">Progresso na trilha</span>
+          <strong class="metric-value compact-value">${analysis.score.percentage}%</strong>
+          ${ui.progress(analysis.score.percentage, `${analysis.trail.nome}: ${analysis.score.percentage}%`)}
+        </div>
+        <div class="trail-summary-numbers">
+          <span><strong>${analysis.completed}</strong> completas</span>
+          <span><strong>${analysis.gaps.length}</strong> lacunas</span>
+          <span><strong>${analysis.total}</strong> competências</span>
+        </div>
+      </section>
+
+      <div class="quick-actions">
+        <button id="trail-dialog-select" class="button ${selected ? "button-secondary" : "button-primary"}" type="button">${selected ? "Deixar de acompanhar" : "Acompanhar esta trilha"}</button>
+        <button id="trail-dialog-plan-gaps" class="button button-secondary" type="button">Adicionar lacunas ao planejamento</button>
+      </div>
+      <p id="trail-dialog-message" class="form-message" role="status"></p>
+
       <section class="stack">
-        ${links.map(link => {
-          const competency = dataService.getById("competencias", link.competencia_id);
-          const minimumLevel = dataService.getById("niveis", link.nivel_minimo_id);
-          return `<div class="catalog-row"><div><strong>${escapeHtml(competency?.nome || link.competencia_id)}</strong><p class="muted">Nível mínimo: ${escapeHtml(minimumLevel?.nome || "Não informado")}</p></div>${ui.badge(link.obrigatorio === false ? "Opcional" : "Obrigatória", link.obrigatorio === false ? "neutral" : "ready")}</div>`;
-        }).join("") || '<div class="empty-state">Nenhuma competência vinculada.</div>'}
+        ${analysis.competencies.map(item => `
+          <article class="trail-competency-row">
+            <div class="trail-competency-main">
+              <div>
+                <strong>${escapeHtml(item.competency.nome)}</strong>
+                <p class="muted">Nível de referência: ${escapeHtml(item.minimumLevel?.nome || "Não informado")}</p>
+              </div>
+              ${ui.badge(item.obrigatorio === false ? "Opcional" : "Obrigatória", item.obrigatorio === false ? "neutral" : "ready")}
+            </div>
+            <div class="trail-competency-progress">
+              <span>${item.score.percentage}%</span>
+              ${ui.progress(item.score.percentage, `${item.competency.nome}: ${item.score.percentage}%`)}
+            </div>
+            <div class="trail-card-actions">
+              <button class="button button-secondary trail-open-competency" data-competency-id="${escapeAttribute(item.competency.competencia_id)}" type="button">Detalhes</button>
+              ${item.score.percentage < 100 ? `<button class="button button-secondary trail-plan-competency" data-competency-id="${escapeAttribute(item.competency.competencia_id)}" type="button">Adicionar ao planejamento</button>` : ""}
+            </div>
+          </article>`).join("") || '<div class="empty-state">Nenhuma competência vinculada.</div>'}
       </section>
     </article>`;
+
   document.body.appendChild(dialog);
+  const message = dialog.querySelector("#trail-dialog-message");
+
+  dialog.querySelector("#trail-dialog-select")?.addEventListener("click", event => {
+    const current = userDataService.getSelectedTrailId();
+    const next = current === trailId ? "" : trailId;
+    userDataService.setSelectedTrail(next);
+    event.currentTarget.textContent = next ? "Deixar de acompanhar" : "Acompanhar esta trilha";
+    message.textContent = next ? "Trilha definida como referência atual." : "Acompanhamento da trilha removido.";
+  });
+
+  dialog.querySelector("#trail-dialog-plan-gaps")?.addEventListener("click", () => {
+    userDataService.addCompetenciesToPlanning(
+      analysis.gaps.map(item => item.competency.competencia_id),
+      "interesse"
+    );
+    message.textContent = `${analysis.gaps.length} competência(s) adicionada(s) ao planejamento.`;
+  });
+
+  dialog.querySelectorAll(".trail-plan-competency").forEach(button => {
+    button.addEventListener("click", () => {
+      userDataService.setPlanningStatus(button.dataset.competencyId, "interesse");
+      button.textContent = "Adicionada";
+      button.disabled = true;
+      message.textContent = "Competência adicionada ao planejamento.";
+    });
+  });
+
+  dialog.querySelectorAll(".trail-open-competency").forEach(button => {
+    button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId));
+  });
+
   dialog.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
   dialog.addEventListener("close", () => dialog.remove());
