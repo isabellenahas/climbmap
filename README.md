@@ -23,3 +23,8 @@ Como o projeto usa módulos JavaScript, execute em um servidor local ou publique
 2. definir o formato de publicação manual em CSV;
 3. criar o serviço de importação e validação das bases administrativas;
 4. construir Catálogo, Competência, Heatmaps e Planejamento com dados reais.
+
+
+## Sprint 1 — Fundação concluída
+
+Consulte `docs/SPRINT-1-FUNDACAO.md` para os módulos e critérios desta entrega.

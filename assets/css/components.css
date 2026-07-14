@@ -134,3 +134,33 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
   .competency-dialog-card { padding: 20px; }
   .resource-card { align-items: stretch; flex-direction: column; }
 }
+
+/* Sprint 1 — componentes e filtros reutilizáveis. */
+.metric-card { display: grid; align-content: start; min-height: 132px; }
+.metric-card small { margin-top: .35rem; }
+.section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.empty-state.compact { padding: 1.25rem; }
+.inline-badges { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.progress-component { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .75rem; }
+.catalog-filter-card { margin-bottom: var(--space-5); }
+.catalog-toolbar { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(150px, 1fr)) auto; gap: var(--space-3); align-items: end; }
+.search-field, .filter-field { display: grid; gap: .4rem; color: var(--muted); font-size: .86rem; font-weight: 700; }
+.search-field input, .filter-field select { width: 100%; min-height: 44px; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; }
+.domain-details { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.domain-details > summary { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem; cursor: pointer; background: var(--surface-2); }
+.domain-details > summary span:first-child { display: grid; gap: .25rem; }
+.domain-details > summary small { color: var(--muted); font-weight: 400; }
+.trail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.trail-card { display: flex; flex-direction: column; min-height: 230px; }
+.trail-card-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.evolution-card { margin-top: var(--space-5); }
+.status-neutral { color: var(--muted); }
+
+@media (max-width: 1180px) {
+  .catalog-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .catalog-toolbar, .trail-grid { grid-template-columns: 1fr; }
+}

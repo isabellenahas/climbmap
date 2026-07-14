@@ -1,7 +1,9 @@
 import { enterProfile, currentUser, logout } from "./core/auth.js";
+import { logger } from "./core/logger.js";
 import { loadState, saveState } from "./core/storage.js";
 import { initRouter } from "./core/router.js";
 import { renderRoute } from "./modules/views.js";
+import { configService } from "./services/config-service.js";
 import { dataService } from "./services/data-service.js";
 
 const entryScreen = document.querySelector("#entry-screen");
@@ -14,8 +16,9 @@ async function initialize() {
   applyTheme(loadState().preferences.theme);
   bindGlobalActions();
 
-  // Carrega e valida todos os CSVs antes de abrir as telas.
-  await dataService.initialize();
+  const health = await dataService.initialize();
+  configService.initialize();
+  logger.info("Camada de dados inicializada.", health);
 
   const user = currentUser();
   user ? openApplication(user) : openEntry();
@@ -31,6 +34,7 @@ function bindGlobalActions() {
       if (!/^\d{4,12}$/.test(pin)) throw new Error("O PIN deve conter de 4 a 12 números.");
       openApplication(enterProfile(name, pin));
     } catch (error) {
+      logger.warn("Não foi possível entrar no perfil.", error);
       message.textContent = error.message;
     }
   });
