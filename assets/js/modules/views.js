@@ -5,6 +5,8 @@ import { ui, escapeHtml, escapeAttribute } from "../components/ui.js";
 import { exportTechnicalBackup, importTechnicalBackup } from "../services/backup-service.js";
 import { configService } from "../services/config-service.js";
 import { dataService } from "../services/data-service.js";
+import { userDataService } from "../services/user-data-service.js";
+import { businessEngine } from "../business/business-engine.js";
 
 export function renderRoute(route, container) {
   const renderers = {
@@ -25,34 +27,34 @@ function bindRouteActions(route, container) {
   if (route === "perfil") bindProfileActions(container);
   if (route === "catalogo") bindCatalogActions(container);
   if (route === "trilhas") bindTrailActions(container);
+  if (route === "planejamento") bindPlanningActions(container);
 }
 
 function renderMap() {
-  const categories = dataService.getAll("categorias", { activeOnly: true });
-  const competencies = dataService.getAll("competencias", { activeOnly: true });
-  const resources = dataService.getAll("recursos", { activeOnly: true });
-  const trails = dataService.getAll("trilhas", { activeOnly: true });
+  const dashboard = businessEngine.getDashboard();
 
   return `
     <div class="metric-grid">
-      ${ui.metric("Nível geral", "0%", "Aguardando autoavaliação")}
-      ${ui.metric("Competências", String(competencies.length), "Publicadas no catálogo")}
-      ${ui.metric("Recursos", String(resources.length), "Cursos, certificados e materiais")}
-      ${ui.metric("Trilhas oficiais", String(trails.length), "Definidas pelo administrador")}
+      ${ui.metric("Nível geral", `${dashboard.general.percentage}%`, `${dashboard.assessedCompetencies} de ${dashboard.totalCompetencies} competências avaliadas`)}
+      ${ui.metric("Recursos concluídos", String(dashboard.completedResources), `${dashboard.totalResources} recursos publicados`)}
+      ${ui.metric("No planejamento", String(dashboard.planningItems), "Competências selecionadas")}
+      ${ui.metric("Favoritos", String(dashboard.favorites), "Competências salvas")}
     </div>
     <div class="section-grid">
       ${ui.card(`
         <div class="section-heading"><div><p class="eyebrow">VISÃO GERAL</p><h3>Mapa macro</h3></div></div>
-        ${categories.length ? categories.map(categoryBar).join("") : '<div class="empty-state">Nenhuma categoria publicada.</div>'}
+        ${dashboard.categories.length ? dashboard.categories.map(category => categoryBar(category, category.score.percentage)).join("") : '<div class="empty-state">Nenhuma categoria publicada.</div>'}
       `)}
       ${ui.card(`
-        <div class="section-heading"><div><p class="eyebrow">PRÓXIMOS PASSOS</p><h3>Lacunas prioritárias</h3></div></div>
-        <p class="muted">As lacunas serão calculadas quando as autoavaliações forem habilitadas na próxima entrega.</p>
-        <div class="empty-state compact">Nenhuma lacuna calculada.</div>
+        <div class="section-heading"><div><p class="eyebrow">COMECE POR AQUI</p><h3>Primeiros passos</h3></div></div>
+        <p class="muted">Abra uma competência no Catálogo, informe sua autoavaliação e adicione o que deseja estudar ao Planejamento.</p>
+        <div class="quick-actions">
+          <a class="button button-primary" href="#/catalogo">Avaliar competências</a>
+          <a class="button button-secondary" href="#/planejamento">Abrir planejamento</a>
+        </div>
       `)}
     </div>`;
 }
-
 function renderCatalog() {
   const filters = stateManager.get("catalogFilters");
   const categories = dataService.getAll("categorias", { activeOnly: true });
@@ -149,7 +151,11 @@ function openCompetencyDetails(competencyId) {
     .filter(level => level.competencia_id === competencyId)
     .sort(byOrder);
   const resources = dataService.getAll("recursos", { activeOnly: true });
-  const resourceTypes = new Map(configService.getResourceTypes().map(type => [type.tipo_recurso_id, type.nome]));
+  const resourceTypes = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, item.nome]));
+  const assessments = businessEngine.getAssessmentScale();
+  const score = businessEngine.getCompetencyScore(competencyId);
+  const favorite = userDataService.isFavorite(competencyId);
+  const plannedItem = userDataService.getPlanningItems().find(item => item.competencyId === competencyId);
 
   document.querySelector("#competency-dialog")?.remove();
   const dialog = document.createElement("dialog");
@@ -161,7 +167,7 @@ function openCompetencyDetails(competencyId) {
         <div>
           <p class="eyebrow">${escapeHtml([category?.nome, domain?.nome].filter(Boolean).join(" · "))}</p>
           <h2>${escapeHtml(competency.nome)}</h2>
-          <p class="muted">${escapeHtml(competency.descricao || "Sem descrição publicada.")}</p>
+          <p class="muted">${escapeHtml(competency.descricao || "")}</p>
           <div class="inline-badges">
             ${complexity ? ui.badge(complexity.nome, "neutral") : ""}
             ${competency.tempo_estimado_horas ? ui.badge(`${competency.tempo_estimado_horas}h estimadas`, "neutral") : ""}
@@ -169,36 +175,96 @@ function openCompetencyDetails(competencyId) {
         </div>
         <button class="icon-button" type="button" data-close-dialog aria-label="Fechar detalhes">×</button>
       </header>
+
+      <section class="competency-actions-panel">
+        <div>
+          <span class="muted">Progresso atual</span>
+          <strong class="metric-value compact-value">${score.percentage}%</strong>
+          ${ui.progress(score.percentage, `${competency.nome}: ${score.percentage}%`)}
+        </div>
+        <label class="assessment-field">
+          <span>Minha autoavaliação</span>
+          <select id="competency-assessment">
+            ${assessments.map(item => `<option value="${escapeAttribute(item.autoavaliacao_id)}" ${item.autoavaliacao_id === score.assessmentId ? "selected" : ""}>${escapeHtml(item.nome)}</option>`).join("")}
+          </select>
+        </label>
+        <button id="favorite-competency" class="button button-secondary" type="button">${favorite ? "★ Remover favorito" : "☆ Favoritar"}</button>
+        <label class="assessment-field">
+          <span>Planejamento</span>
+          <select id="competency-planning-status">
+            <option value="">Não adicionar</option>
+            ${planningOptions(plannedItem?.status ?? "")}
+          </select>
+        </label>
+      </section>
+
       <section class="stack">
-        <div><h3>Níveis da competência</h3><p class="muted">Recursos agrupados pelo nível ao qual pertencem.</p></div>
+        <div><h3>Níveis da competência</h3><p class="muted">Concluir recursos soma evidências à nota, sem alterar sua autoavaliação.</p></div>
         ${levels.length ? levels.map(level => {
           const levelResources = resources.filter(resource => resource.nivel_id === level.nivel_id).sort(byOrder);
           return `
             <details class="level-details" open>
               <summary><span><strong>${escapeHtml(level.nome)}</strong><small>${escapeHtml(level.descricao || "")}</small></span>${ui.badge(`${levelResources.length} recurso(s)`, "ready")}</summary>
               <div class="resource-list">
-                ${levelResources.length ? levelResources.map(resource => `
+                ${levelResources.length ? levelResources.map(resource => {
+                  const resourceProgress = userDataService.getResourceProgress(resource.recurso_id);
+                  return `
                   <article class="resource-card">
                     <div>
                       <span class="resource-type">${escapeHtml(resourceTypes.get(resource.tipo_recurso_id) || "Recurso")}</span>
                       <h4>${escapeHtml(resource.nome)}</h4>
                       <p class="muted">${escapeHtml(resource.descricao || "")}</p>
                     </div>
-                    ${resource.url_principal ? `<a class="button button-secondary" href="${escapeAttribute(resource.url_principal)}" target="_blank" rel="noopener noreferrer">Abrir recurso</a>` : ""}
-                  </article>`).join("") : '<div class="empty-state compact">Nenhum recurso publicado para este nível.</div>'}
+                    <div class="resource-actions">
+                      <select class="resource-status-select" data-resource-id="${escapeAttribute(resource.recurso_id)}" aria-label="Status de ${escapeAttribute(resource.nome)}">
+                        <option value="" ${!resourceProgress?.status ? "selected" : ""}>Sem status</option>
+                        <option value="interesse" ${resourceProgress?.status === "interesse" ? "selected" : ""}>Tenho interesse</option>
+                        <option value="estudando" ${resourceProgress?.status === "estudando" ? "selected" : ""}>Estou estudando</option>
+                        <option value="concluido" ${resourceProgress?.status === "concluido" ? "selected" : ""}>Concluído</option>
+                      </select>
+                      ${resource.url_principal ? `<a class="button button-secondary" href="${escapeAttribute(resource.url_principal)}" target="_blank" rel="noopener noreferrer">Abrir recurso</a>` : ""}
+                    </div>
+                  </article>`;
+                }).join("") : '<div class="empty-state compact">Nenhum recurso publicado para este nível.</div>'}
               </div>
             </details>`;
         }).join("") : '<div class="empty-state">Nenhum nível publicado.</div>'}
       </section>
+      <p id="competency-save-message" class="form-message" role="status"></p>
     </article>`;
 
   document.body.appendChild(dialog);
+  const message = dialog.querySelector("#competency-save-message");
+  const refreshScore = () => {
+    const updated = businessEngine.getCompetencyScore(competencyId);
+    message.textContent = `Salvo. Progresso atualizado para ${updated.percentage}%.`;
+  };
+
+  dialog.querySelector("#competency-assessment")?.addEventListener("change", event => {
+    userDataService.setCompetencyAssessment(competencyId, event.target.value);
+    refreshScore();
+  });
+  dialog.querySelector("#favorite-competency")?.addEventListener("click", event => {
+    userDataService.toggleFavorite(competencyId);
+    event.currentTarget.textContent = userDataService.isFavorite(competencyId) ? "★ Remover favorito" : "☆ Favoritar";
+    message.textContent = "Favoritos atualizados.";
+  });
+  dialog.querySelector("#competency-planning-status")?.addEventListener("change", event => {
+    if (event.target.value) userDataService.setPlanningStatus(competencyId, event.target.value);
+    else userDataService.removeFromPlanning(competencyId);
+    message.textContent = "Planejamento atualizado.";
+  });
+  dialog.querySelectorAll(".resource-status-select").forEach(select => {
+    select.addEventListener("change", event => {
+      userDataService.setResourceStatus(event.currentTarget.dataset.resourceId, event.currentTarget.value);
+      refreshScore();
+    });
+  });
   dialog.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
   dialog.addEventListener("close", () => dialog.remove());
   dialog.showModal();
 }
-
 function renderTrails() {
   const trails = dataService.getAll("trilhas", { activeOnly: true }).sort(byOrder);
   const links = dataService.getAll("trilhaCompetencias");
@@ -252,13 +318,69 @@ function openTrailDetails(trailId) {
 }
 
 function renderPlanning() {
-  return `${ui.card(`<p class="eyebrow">PLANEJAMENTO INDIVIDUAL</p><h3>Seus planos de desenvolvimento</h3><p class="muted">A estrutura está pronta para receber planos pessoais e itens selecionados do catálogo.</p><div class="empty-state compact">Nenhum plano criado.</div>`)}`;
+  const columns = [
+    ["interesse", "Tenho interesse"],
+    ["vou_estudar", "Vou estudar"],
+    ["estudando", "Estudando"],
+    ["concluido", "Concluído"]
+  ];
+  const items = userDataService.getPlanningItems();
+
+  return `
+    <div class="section-heading">
+      <div><p class="eyebrow">PLANEJAMENTO INDIVIDUAL</p><h3>Meu plano de desenvolvimento</h3><p class="muted">Altere o status pelo seletor de cada card.</p></div>
+    </div>
+    <div class="planning-board">
+      ${columns.map(([status, label]) => {
+        const columnItems = items.filter(item => item.status === status);
+        return `<section class="planning-column">
+          <header><strong>${label}</strong>${ui.badge(String(columnItems.length), "neutral")}</header>
+          <div class="planning-column-content">
+            ${columnItems.map(item => planningCard(item, status)).join("") || '<div class="empty-state compact">Nenhum item.</div>'}
+          </div>
+        </section>`;
+      }).join("")}
+    </div>`;
 }
 
+function planningCard(item) {
+  const competency = dataService.getById("competencias", item.competencyId);
+  if (!competency) return "";
+  const score = businessEngine.getCompetencyScore(item.competencyId);
+  return `<article class="planning-card" data-competency-id="${escapeAttribute(item.competencyId)}">
+    <div><strong>${escapeHtml(competency.nome)}</strong><p class="muted">${score.percentage}% de progresso</p></div>
+    ${ui.progress(score.percentage, `${competency.nome}: ${score.percentage}%`)}
+    <select class="planning-status-select" data-competency-id="${escapeAttribute(item.competencyId)}">
+      ${planningOptions(item.status)}
+      <option value="remover">Remover do planejamento</option>
+    </select>
+    <button class="button button-secondary planning-open-details" data-competency-id="${escapeAttribute(item.competencyId)}">Abrir detalhes</button>
+  </article>`;
+}
+
+function bindPlanningActions(container) {
+  container.querySelectorAll(".planning-status-select").forEach(select => {
+    select.addEventListener("change", event => {
+      const competencyId = event.currentTarget.dataset.competencyId;
+      if (event.currentTarget.value === "remover") userDataService.removeFromPlanning(competencyId);
+      else userDataService.setPlanningStatus(competencyId, event.currentTarget.value);
+      renderRoute("planejamento", container);
+    });
+  });
+  container.querySelectorAll(".planning-open-details").forEach(button => {
+    button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId));
+  });
+}
 function renderEvolution() {
-  return `<div class="metric-grid">${ui.metric("Competências avaliadas", "0")}${ui.metric("Recursos concluídos", "0")}${ui.metric("Certificações", "0")}${ui.metric("Planos ativos", "0")}</div>${ui.card(`<h3>Retrato atual</h3><p class="muted">A evolução temporal será habilitada quando o usuário começar a registrar seu progresso.</p><div class="empty-state compact">Ainda não há dados individuais.</div>`, "evolution-card")}`;
+  const dashboard = businessEngine.getDashboard();
+  const evaluated = dashboard.assessedCompetencies;
+  return `<div class="metric-grid">
+    ${ui.metric("Competências avaliadas", String(evaluated), `${dashboard.totalCompetencies} disponíveis`)}
+    ${ui.metric("Recursos concluídos", String(dashboard.completedResources))}
+    ${ui.metric("Favoritos", String(dashboard.favorites))}
+    ${ui.metric("Planos ativos", String(dashboard.planningItems))}
+  </div>${ui.card(`<h3>Retrato atual</h3><p class="muted">Nesta versão, a tela mostra o estado atual. O histórico temporal será incluído quando decidirmos quais eventos devem ser preservados.</p>${ui.progress(dashboard.general.percentage, `Nível geral: ${dashboard.general.percentage}%`)}`, "evolution-card")}`;
 }
-
 function renderAdministration() {
   const report = dataService.getHealthReport();
   const datasets = Object.entries(report.datasets ?? {});
@@ -326,8 +448,13 @@ function countResources(competency) {
   return competency.niveis.reduce((sum, level) => sum + level.recursos.length, 0);
 }
 
-function categoryBar(category) {
-  return `<div class="category-progress"><div><strong>${escapeHtml(category.nome)}</strong><span>0%</span></div>${ui.progress(0, `${category.nome}: 0%`)}</div>`;
+function categoryBar(category, percentage = 0) {
+  return `<div class="category-progress"><div><strong>${escapeHtml(category.nome)}</strong><span>${percentage}%</span></div>${ui.progress(percentage, `${category.nome}: ${percentage}%`)}</div>`;
+}
+
+function planningOptions(selected = "") {
+  const options = [["interesse", "Tenho interesse"], ["vou_estudar", "Vou estudar"], ["estudando", "Estudando"], ["concluido", "Concluído"]];
+  return options.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
 }
 
 function byOrder(a, b) {

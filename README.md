@@ -28,3 +28,8 @@ Como o projeto usa módulos JavaScript, execute em um servidor local ou publique
 ## Sprint 1 — Fundação concluída
 
 Consulte `docs/SPRINT-1-FUNDACAO.md` para os módulos e critérios desta entrega.
+
+
+## Sprint 2 — núcleo utilizável
+
+A aplicação agora possui Business Engine, autoavaliação, favoritos, progresso de recursos e planejamento individual.
