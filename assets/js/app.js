@@ -2,7 +2,7 @@ import { enterProfile, currentUser, logout } from "./core/auth.js";
 import { logger } from "./core/logger.js";
 import { loadState, saveState } from "./core/storage.js";
 import { initRouter } from "./core/router.js";
-import { renderRoute } from "./modules/views.js?v=2.4.0";
+import { renderRoute } from "./modules/views.js?v=2.5.0";
 import { configService } from "./services/config-service.js";
 import { dataService } from "./services/data-service.js";
 

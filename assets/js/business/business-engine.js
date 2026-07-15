@@ -71,13 +71,17 @@ class BusinessEngine {
       const requiredLevels = this.getCompetencyLevels(competency.competencia_id)
         .filter(level => Number(level.ordem || 0) <= Number(minimumLevel.ordem || 0));
       const score = aggregateScores(requiredLevels.map(level => this.getLevelScore(level.nivel_id)));
-      return { ...link, competency, minimumLevel, requiredLevels, score };
+      const nextRequiredLevel = requiredLevels.find(level => {
+        const progress = userDataService.getLevelProgress(level.nivel_id);
+        return progress?.status !== "concluido" && this.getLevelScore(level.nivel_id).percentage < 100;
+      }) ?? null;
+      return { ...link, competency, minimumLevel, requiredLevels, nextRequiredLevel, satisfied: !nextRequiredLevel, score };
     }).filter(Boolean);
     return {
       trail,
       requirements,
       score: aggregateScores(requirements.map(item => item.score)),
-      completed: requirements.filter(item => item.score.percentage >= 100).length,
+      completed: requirements.filter(item => item.satisfied).length,
       total: requirements.length
     };
   }
@@ -92,25 +96,35 @@ class BusinessEngine {
     const userData = userDataService.getCurrentUserData();
     const categories = dataService.getAll("categorias", { activeOnly: true }).sort(byOrder)
       .map(category => ({ ...category, score: this.getCategoryScore(category.categoria_id) }));
-    const highestCategory = [...categories].sort((a, b) => b.score.percentage - a.score.percentage)[0] ?? null;
-    const planningItems = userData.levelProgress.filter(item => item.status);
+    const highestCategory = [...categories].filter(item => item.score.percentage > 0).sort((a, b) => b.score.percentage - a.score.percentage)[0] ?? null;
+    const levelPlanningItems = userData.levelProgress.filter(item => item.status);
+    const resourcePlanningItems = userData.resourceProgress.filter(item => item.status);
+    const resources = dataService.getAll("recursos", { activeOnly: true });
     const resourceTypes = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, String(item.nome || "").toLocaleLowerCase("pt-BR")]));
     const completedResourceIds = new Set(userData.resourceProgress.filter(item => item.status === "concluido").map(item => item.resourceId));
-    const completedCertifications = dataService.getAll("recursos", { activeOnly: true })
-      .filter(item => completedResourceIds.has(item.recurso_id) && (resourceTypes.get(item.tipo_recurso_id) || "").includes("certifica")).length;
+    const completedCertifications = resources.filter(item => completedResourceIds.has(item.recurso_id) && (resourceTypes.get(item.tipo_recurso_id) || "").includes("certifica")).length;
+    const inProgressCourses = userData.resourceProgress.filter(item => item.status === "estudando").map(progress => {
+      const resource = resources.find(item => item.recurso_id === progress.resourceId);
+      if (!resource || !(resourceTypes.get(resource.tipo_recurso_id) || "").includes("curso")) return null;
+      const level = dataService.getById("niveis", resource.nivel_id);
+      const competency = level ? dataService.getById("competencias", level.competencia_id) : null;
+      return { ...resource, competencyId: competency?.competencia_id || "", competencyName: competency?.nome || "", levelName: level?.nome || "", url: resource.url_principal || "" };
+    }).filter(Boolean).slice(0, 6);
+
     return {
       general: this.getGeneralScore(), categories, highestCategory,
       selectedTrail: this.getSelectedTrailAnalysis(),
       assessedLevels: userData.levelProgress.filter(item => item.assessmentId).length,
-      planningItems: planningItems.length,
-      studyingLevels: planningItems.filter(item => item.status === "estudando").length,
+      planningItems: levelPlanningItems.length + resourcePlanningItems.length,
+      studyingNow: levelPlanningItems.filter(item => item.status === "estudando").length + resourcePlanningItems.filter(item => item.status === "estudando").length,
+      studyingLevels: levelPlanningItems.filter(item => item.status === "estudando").length,
       completedResources: completedResourceIds.size,
       completedCertifications,
+      inProgressCourses,
       favorites: userData.favorites.length,
       totalLevels: dataService.getAll("niveis", { activeOnly: true }).length
     };
-  }
-}
+  }}
 
 function aggregateScores(scores) {
   const earned = scores.reduce((sum, item) => sum + (Number(item.earned) || 0), 0);

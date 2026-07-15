@@ -512,3 +512,34 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
   .planning-summary { justify-content: flex-start; }
   .planning-card-actions { grid-template-columns: 1fr; }
 }
+
+
+/* Sprint 2.5 — refinamento de UX, heatmap e planejamento misto. */
+.dashboard-hero-grid,
+.dashboard-mini-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--space-4); }
+.dashboard-mini-grid { margin-top:var(--space-4); }
+.dashboard-metric { position:relative; display:grid; gap:.45rem; min-height:132px; padding:1.25rem; overflow:hidden; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); color:var(--text); box-shadow:var(--shadow); text-decoration:none; }
+.dashboard-metric::before { content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--metric-accent,#355ce2); }
+.dashboard-metric span,.dashboard-metric small { color:var(--muted); }
+.dashboard-metric strong { font-size:1.9rem; line-height:1.15; overflow-wrap:anywhere; }
+.dashboard-metric.is-compact { min-height:112px; }
+.dashboard-metric-link:hover { transform:translateY(-2px); }
+.tone-blue{--metric-accent:#3564e8}.tone-purple{--metric-accent:#7c4dff}.tone-green{--metric-accent:#10a46f}.tone-orange{--metric-accent:#f28c28}.tone-teal{--metric-accent:#0a9ca6}.tone-pink{--metric-accent:#d84f91}.tone-yellow{--metric-accent:#e0a600}.tone-indigo{--metric-accent:#5457d6}
+.dashboard-section { margin-top:var(--space-5); }
+.category-heatmap { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:1.25rem; }
+.heatmap-tile { display:flex; justify-content:space-between; align-items:center; gap:1rem; min-height:86px; padding:1rem; border-radius:14px; border:1px solid rgb(53 92 226 / 12%); }
+.heatmap-tile strong { font-size:1.35rem; }
+.heatmap-intensity-0{background:var(--surface-2)}.heatmap-intensity-1{background:#e9efff}.heatmap-intensity-2{background:#cad8ff}.heatmap-intensity-3{background:#98b3ff}.heatmap-intensity-4{background:#668cff;color:#0d1b42}.heatmap-intensity-5{background:#355ce2;color:#fff}
+.in-progress-course-list { display:grid; gap:.75rem; margin-top:1rem; }
+.in-progress-course-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:1rem; padding:1rem; border:1px solid var(--border); border-radius:14px; background:linear-gradient(90deg,rgb(53 92 226 / 7%),transparent); }
+.in-progress-course-card div { display:grid; gap:.25rem; }.in-progress-course-card small { color:var(--muted); }.course-status-dot { width:12px;height:12px;border-radius:50%;background:#f28c28;box-shadow:0 0 0 5px rgb(242 140 40 / 13%); }.text-link{color:var(--primary);font-weight:700;text-decoration:none}
+.catalog-competency-clean { padding:1rem; border-top:1px solid var(--border); background:var(--surface); }
+.catalog-competency-clean:first-child { border-top:0; }
+.catalog-competency-main { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.catalog-competency-copy { min-width:0; }.catalog-competency-copy p { margin:.35rem 0 .7rem; }.catalog-competency-title { border:0;background:none;padding:0;color:var(--text);font:inherit;font-weight:800;font-size:1rem;cursor:pointer;text-align:left }.catalog-competency-title:hover{text-decoration:underline;text-decoration-color:var(--primary)}
+.catalog-level-chips { display:flex; flex-wrap:wrap; gap:.45rem; }.catalog-level-chips span { padding:.3rem .6rem; border-radius:999px; background:var(--surface-2); color:var(--muted); font-size:.8rem; }
+.competency-dialog-clean { display:grid; gap:1.4rem; }.competency-description{max-width:72ch}.competency-overview-grid { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1.25rem; align-items:center; padding:1.1rem; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-2); }.favorite-button{align-self:center}.competency-level-list{display:grid;gap:1rem;margin-top:1rem}.level-card-clean{padding:1rem;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface)}.level-card-header{display:flex;justify-content:space-between;gap:1rem}.level-card-header h4{margin:0 0 .35rem}.level-card-header p{margin:0}.level-score-pill{align-self:flex-start;padding:.35rem .65rem;border-radius:999px;background:rgb(53 92 226 / 10%);color:var(--primary)}.level-controls-clean{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1rem 0}.resource-list-clean{padding:0;}.resource-card-clean{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}.resource-card-clean .resource-actions{align-items:end}.compact-field{display:grid;gap:.35rem;color:var(--muted);font-size:.82rem;font-weight:700}.compact-field select{min-width:170px}
+.trail-group{margin-top:var(--space-5);padding-top:var(--space-4);border-top:1px solid var(--border)}.trail-group-heading{margin-bottom:1rem}.trail-card-person{border-top:5px solid #7c4dff}.trail-card-career{border-top:5px solid #10a46f}
+.planning-legend{display:flex;gap:1.25rem;margin:0 0 1rem;color:var(--muted)}.planning-legend span{display:flex;align-items:center;gap:.45rem}.legend-dot{width:10px;height:10px;border-radius:50%}.competency-dot{background:#355ce2}.resource-dot{background:#7c4dff}.planning-card{position:relative;border-left:5px solid transparent}.planning-card-competency{border-left-color:#355ce2;background:linear-gradient(90deg,rgb(53 92 226 / 7%),var(--surface) 36%)}.planning-card-resource{border-left-color:#7c4dff;background:linear-gradient(90deg,rgb(124 77 255 / 7%),var(--surface) 36%)}.planning-kind-label{font-size:.7rem;font-weight:850;letter-spacing:.08em;color:var(--muted)}
+@media(max-width:1050px){.dashboard-hero-grid,.dashboard-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.resource-card-clean{grid-template-columns:1fr}.resource-card-clean .resource-actions{justify-content:flex-start}.competency-overview-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.dashboard-hero-grid,.dashboard-mini-grid{grid-template-columns:1fr}.catalog-competency-main,.level-card-header{align-items:stretch;flex-direction:column}.level-controls-clean{grid-template-columns:1fr}.in-progress-course-card{grid-template-columns:auto 1fr}.in-progress-course-card .button{grid-column:1/-1}}
