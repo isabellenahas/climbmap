@@ -1,5 +1,5 @@
-# Climb Map — atualização Sprint 2.2
+# Climb Map — Sprint 2.4
 
-Patch para planejamento e autoavaliação por nível de competência.
+Atualização incremental para planejamento detalhado por nível e registro de evidências dos recursos.
 
-Envie `assets`, `docs`, `index.html` e `README.md` para a raiz do repositório. A pasta `data` não faz parte deste patch.
+Não contém a pasta `data` e não substitui os CSVs publicados.

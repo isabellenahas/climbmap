@@ -400,3 +400,115 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
 .level-summary-score { color: var(--muted); font-size: .9rem; }
 .admin-health-section { margin-top: 2rem; }
 @media (max-width: 760px) { .level-controls, .competency-summary-panel { grid-template-columns: 1fr; } .catalog-competency-details > summary { align-items: flex-start; flex-direction: column; } }
+
+/* Sprint 2.3.1 — estabilidade visual e catálogo clean. */
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.dashboard-metrics-secondary { margin-top: var(--space-4); }
+.dashboard-section { margin-top: var(--space-5); }
+.dashboard-section-heading { margin-bottom: var(--space-4); }
+.metric-card-link { text-decoration: none; color: inherit; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.metric-card-link:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+
+.category-progress-list { display: grid; gap: var(--space-4); }
+.category-progress { display: grid; gap: .55rem; margin: 0; }
+.category-progress > div:first-child { display: flex; justify-content: space-between; gap: 1rem; }
+.progress-track { height: .65rem; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+.progress-track span { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+
+.catalog-results { gap: var(--space-4); }
+.catalog-category-card { display: grid; gap: var(--space-4); }
+.catalog-category-header { margin-bottom: 0; }
+.catalog-domain-list { display: grid; gap: var(--space-3); }
+.domain-details { background: var(--surface); }
+.domain-details > summary { align-items: center; list-style: none; }
+.domain-details > summary::-webkit-details-marker { display: none; }
+.domain-summary-copy { min-width: 0; }
+.domain-summary-meta { display: flex; align-items: center; gap: var(--space-3); color: var(--muted); white-space: nowrap; }
+.disclosure-icon { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; transition: transform .16s ease; }
+.domain-details[open] > summary .disclosure-icon { transform: rotate(180deg); }
+.catalog-competency-list { display: grid; gap: var(--space-2); padding: var(--space-3); border-top: 1px solid var(--border); }
+.catalog-competency { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); overflow: hidden; }
+.catalog-competency-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-3); }
+.catalog-competency-toggle { width: 2rem; height: 2rem; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.catalog-competency.is-open .catalog-competency-toggle .disclosure-icon { transform: rotate(90deg); }
+.catalog-competency-copy { display: grid; gap: .2rem; min-width: 0; }
+.catalog-competency-copy small { color: var(--muted); }
+.catalog-competency-title { width: fit-content; max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+.catalog-competency-title:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.catalog-competency-preview { display: grid; gap: var(--space-2); padding: 0 var(--space-3) var(--space-3) calc(var(--space-3) + 2rem + var(--space-3)); border-top: 1px solid var(--border); }
+.catalog-competency-preview[hidden] { display: none; }
+.catalog-level-preview { display: flex; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-3); color: var(--muted); }
+.catalog-level-preview strong { color: var(--text); }
+
+.admin-health-section { margin-top: calc(var(--space-7) + var(--space-2)); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (max-width: 1100px) {
+  .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .dashboard-metrics { grid-template-columns: 1fr; }
+  .catalog-competency-header { grid-template-columns: auto minmax(0, 1fr); }
+  .catalog-competency-header > .button { grid-column: 2; justify-self: start; }
+  .catalog-competency-preview { padding-left: var(--space-3); }
+  .domain-summary-meta > span:first-child { display: none; }
+}
+
+/* Sprint 2.4 — detalhes do planejamento e evidências dos recursos. */
+.resource-card-detailed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.resource-main-copy { min-width: 0; }
+.resource-personal-details {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+.resource-personal-details > summary {
+  width: fit-content;
+  color: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.resource-details-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.resource-details-form label,
+.planning-details-form label {
+  display: grid;
+  gap: .45rem;
+}
+.resource-notes-field,
+.planning-notes-field { grid-column: 1 / -1; }
+.resource-details-form button { justify-self: start; }
+
+.planning-heading { align-items: flex-end; }
+.planning-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.planning-card-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: .85rem; }
+.planning-notes { margin: 0; padding: .65rem .75rem; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--muted); white-space: pre-wrap; }
+.planning-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.planning-details-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.planning-dialog-actions { grid-column: 1 / -1; display: flex; gap: var(--space-2); }
+
+@media (max-width: 760px) {
+  .resource-card-detailed,
+  .resource-details-form,
+  .planning-details-form { grid-template-columns: 1fr; }
+  .resource-actions { align-items: stretch; }
+  .resource-notes-field,
+  .planning-notes-field,
+  .planning-dialog-actions { grid-column: auto; }
+  .planning-heading { align-items: flex-start; }
+  .planning-summary { justify-content: flex-start; }
+  .planning-card-actions { grid-template-columns: 1fr; }
+}

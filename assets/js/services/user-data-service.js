@@ -68,7 +68,21 @@ class UserDataService {
   setLevelPlanningStatus(levelId, status) {
     return this.updateUserData(data => {
       const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
+      const now = new Date().toISOString();
       item.status = status;
+      if (status === "estudando" && !item.startedAt) item.startedAt = now;
+      item.completedAt = status === "concluido" ? now : "";
+      item.updatedAt = now;
+    });
+  }
+
+  /** Atualiza metadados do planejamento sem alterar a nota do nível. */
+  setLevelPlanningDetails(levelId, details = {}) {
+    return this.updateUserData(data => {
+      const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
+      if (Object.hasOwn(details, "priority")) item.priority = Number(details.priority) || 0;
+      if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
+      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
       item.updatedAt = new Date().toISOString();
     });
   }
@@ -80,6 +94,9 @@ class UserDataService {
         item.status = "";
         item.priority = 0;
         item.targetDate = "";
+        item.notes = "";
+        item.startedAt = "";
+        item.completedAt = "";
         item.updatedAt = new Date().toISOString();
       }
     });
@@ -114,13 +131,22 @@ class UserDataService {
 
   setResourceStatus(resourceId, status) {
     return this.updateUserData(data => {
-      const item = upsert(data.resourceProgress, "resourceId", resourceId, {
-        resourceId, status: "", startedAt: "", completedAt: "", expiresAt: "",
-        evidenceUrl: "", notes: "", updatedAt: null
-      });
+      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
+      const now = new Date().toISOString();
       item.status = status;
-      if (status === "estudando" && !item.startedAt) item.startedAt = new Date().toISOString();
-      item.completedAt = status === "concluido" ? new Date().toISOString() : "";
+      if (status === "estudando" && !item.startedAt) item.startedAt = now;
+      item.completedAt = status === "concluido" ? now : "";
+      item.updatedAt = now;
+    });
+  }
+
+  /** Registra evidência, validade e observações pessoais do recurso. */
+  setResourceDetails(resourceId, details = {}) {
+    return this.updateUserData(data => {
+      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
+      if (Object.hasOwn(details, "expiresAt")) item.expiresAt = String(details.expiresAt || "");
+      if (Object.hasOwn(details, "evidenceUrl")) item.evidenceUrl = String(details.evidenceUrl || "").trim();
+      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
       item.updatedAt = new Date().toISOString();
     });
   }
@@ -141,7 +167,30 @@ class UserDataService {
 }
 
 function emptyLevelProgress(levelId) {
-  return { levelId, assessmentId: "", status: "", priority: 0, targetDate: "", notes: "", updatedAt: null };
+  return {
+    levelId,
+    assessmentId: "",
+    status: "",
+    priority: 0,
+    targetDate: "",
+    notes: "",
+    startedAt: "",
+    completedAt: "",
+    updatedAt: null
+  };
+}
+
+function emptyResourceProgress(resourceId) {
+  return {
+    resourceId,
+    status: "",
+    startedAt: "",
+    completedAt: "",
+    expiresAt: "",
+    evidenceUrl: "",
+    notes: "",
+    updatedAt: null
+  };
 }
 
 function upsert(collection, key, value, initialValue) {
@@ -153,10 +202,14 @@ function upsert(collection, key, value, initialValue) {
 function normalizeUserData(data) {
   return {
     competencyProgress: Array.isArray(data.competencyProgress) ? data.competencyProgress : [],
-    resourceProgress: Array.isArray(data.resourceProgress) ? data.resourceProgress : [],
+    resourceProgress: Array.isArray(data.resourceProgress)
+      ? data.resourceProgress.map(item => ({ ...emptyResourceProgress(item.resourceId), ...item }))
+      : [],
     plans: Array.isArray(data.plans) ? data.plans : [],
     planItems: Array.isArray(data.planItems) ? data.planItems : [],
-    levelProgress: Array.isArray(data.levelProgress) ? data.levelProgress : [],
+    levelProgress: Array.isArray(data.levelProgress)
+      ? data.levelProgress.map(item => ({ ...emptyLevelProgress(item.levelId), ...item }))
+      : [],
     favorites: Array.isArray(data.favorites) ? data.favorites : [],
     selectedTrailId: typeof data.selectedTrailId === "string" ? data.selectedTrailId : "",
     selectedTrailUpdatedAt: data.selectedTrailUpdatedAt ?? null,

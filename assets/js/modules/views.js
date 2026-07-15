@@ -5,8 +5,8 @@ import { ui, escapeHtml, escapeAttribute } from "../components/ui.js";
 import { exportTechnicalBackup, importTechnicalBackup } from "../services/backup-service.js";
 import { configService } from "../services/config-service.js";
 import { dataService } from "../services/data-service.js";
-import { userDataService } from "../services/user-data-service.js";
-import { businessEngine } from "../business/business-engine.js";
+import { userDataService } from "../services/user-data-service.js?v=2.4.0";
+import { businessEngine } from "../business/business-engine.js?v=2.4.0";
 
 export function renderRoute(route, container) {
   const renderers = { mapa: renderMap, catalogo: renderCatalog, trilhas: renderTrails, planejamento: renderPlanning, evolucao: renderEvolution, perfil: renderProfile, administracao: renderAdministration };
@@ -23,23 +23,49 @@ function bindRouteActions(route, container) {
 }
 
 function renderMap() {
-  const d = businessEngine.getDashboard();
-  const highest = d.highestCategory;
+  const raw = businessEngine.getDashboard() ?? {};
+  const generalPercentage = safeNumber(raw.general?.percentage);
+  const assessedLevels = safeNumber(raw.assessedLevels);
+  const totalLevels = safeNumber(raw.totalLevels);
+  const planningItems = safeNumber(raw.planningItems);
+  const studyingLevels = safeNumber(raw.studyingLevels);
+  const completedResources = safeNumber(raw.completedResources);
+  const completedCertifications = safeNumber(raw.completedCertifications);
+  const favorites = safeNumber(raw.favorites);
+  const categories = Array.isArray(raw.categories) ? raw.categories : [];
+  const highest = raw.highestCategory?.score ? raw.highestCategory : null;
+  const selectedTrail = raw.selectedTrail ?? null;
+
   return `
-    <div class="metric-grid user-metric-grid">
-      ${ui.metric("Nível geral", `${d.general.percentage}%`, `${d.assessedLevels} de ${d.totalLevels} níveis avaliados`)}
-      ${ui.metric("Categoria com maior nota", highest ? `${highest.nome} · ${highest.score.percentage}%` : "Sem dados", "Maior domínio atual")}
-      <a class="metric-card metric-card-link" href="#/planejamento"><span>No planejamento</span><strong>${d.planningItems}</strong><small>Abrir planejamento</small></a>
-      ${ui.metric("Estudando agora", String(d.studyingLevels), "Níveis em andamento")}
-    </div>
-    <div class="metric-grid secondary-metrics">
-      ${ui.metric("Recursos concluídos", String(d.completedResources))}
-      ${ui.metric("Certificações concluídas", String(d.completedCertifications))}
-      ${ui.metric("Favoritos", String(d.favorites))}
-      ${ui.metric("Trilha acompanhada", d.selectedTrail ? `${d.selectedTrail.trail.nome} · ${d.selectedTrail.score.percentage}%` : "Nenhuma")}
-    </div>
-    ${ui.card(`<div class="section-heading"><div><p class="eyebrow">PROGRESSO POR CATEGORIA</p><h3>Seu mapa atual</h3></div></div><div class="stack">${d.categories.map(c => categoryBar(c, c.score.percentage)).join("") || '<div class="empty-state">Nenhuma categoria publicada.</div>'}</div>`, "stack")}
-    ${d.selectedTrail ? ui.card(`<p class="eyebrow">TRILHA ACOMPANHADA</p><h3>${escapeHtml(d.selectedTrail.trail.nome)}</h3><p class="muted">${d.selectedTrail.completed} de ${d.selectedTrail.total} requisitos atendidos.</p>${ui.progress(d.selectedTrail.score.percentage, `${d.selectedTrail.trail.nome}: ${d.selectedTrail.score.percentage}%`)}<div class="quick-actions"><a class="button button-secondary" href="#/trilhas">Ver trilha</a></div>`, "stack") : ui.card(`<p class="eyebrow">TRILHAS</p><h3>Nenhuma trilha acompanhada</h3><p class="muted">Escolha uma trilha oficial para acompanhar seu progresso nesse recorte.</p><a class="button button-secondary" href="#/trilhas">Escolher trilha</a>`, "stack")}`;
+    <section class="dashboard-metrics" aria-label="Indicadores principais">
+      ${ui.metric("Nível geral", `${generalPercentage}%`, `${assessedLevels} de ${totalLevels} níveis avaliados`)}
+      ${ui.metric("Categoria com maior nota", highest ? `${highest.nome} · ${safeNumber(highest.score.percentage)}%` : "Sem avaliações", highest ? "Maior domínio atual" : "Avalie níveis para gerar este indicador")}
+      <a class="card metric-card metric-card-link" href="#/planejamento" aria-label="Abrir planejamento">
+        <span class="muted">No planejamento</span>
+        <strong class="metric-value">${planningItems}</strong>
+        <small class="muted">Abrir planejamento →</small>
+      </a>
+      ${ui.metric("Estudando agora", String(studyingLevels), "Níveis em andamento")}
+    </section>
+
+    <section class="dashboard-metrics dashboard-metrics-secondary" aria-label="Indicadores complementares">
+      ${ui.metric("Recursos concluídos", String(completedResources))}
+      ${ui.metric("Certificações concluídas", String(completedCertifications))}
+      ${ui.metric("Favoritos", String(favorites))}
+      ${ui.metric("Trilha acompanhada", selectedTrail ? `${selectedTrail.trail.nome} · ${safeNumber(selectedTrail.score?.percentage)}%` : "Nenhuma")}
+    </section>
+
+    ${ui.card(`
+      <div class="section-heading dashboard-section-heading">
+        <div><p class="eyebrow">PROGRESSO POR CATEGORIA</p><h3>Seu mapa atual</h3></div>
+      </div>
+      <div class="category-progress-list">
+        ${categories.map(category => categoryBar(category, safeNumber(category.score?.percentage))).join("") || '<div class="empty-state compact">Nenhuma categoria publicada.</div>'}
+      </div>`, "dashboard-section")}
+
+    ${selectedTrail
+      ? ui.card(`<p class="eyebrow">TRILHA ACOMPANHADA</p><h3>${escapeHtml(selectedTrail.trail.nome)}</h3><p class="muted">${safeNumber(selectedTrail.completed)} de ${safeNumber(selectedTrail.total)} requisitos atendidos.</p>${ui.progress(safeNumber(selectedTrail.score?.percentage), `${selectedTrail.trail.nome}: ${safeNumber(selectedTrail.score?.percentage)}%`)}<div class="quick-actions"><a class="button button-secondary" href="#/trilhas">Ver trilha</a></div>`, "stack dashboard-section")
+      : ui.card(`<p class="eyebrow">TRILHAS</p><h3>Nenhuma trilha acompanhada</h3><p class="muted">Escolha uma trilha oficial para acompanhar seu progresso nesse recorte.</p><a class="button button-secondary" href="#/trilhas">Escolher trilha</a>`, "stack dashboard-section")}`;
 }
 function bindMapActions() {}
 
@@ -54,17 +80,75 @@ function renderCatalog() {
 
 function renderCatalogResults(hierarchy) {
   if (!hierarchy.length) return ui.empty("Nenhum resultado encontrado com os filtros atuais.");
-  return hierarchy.map(category => `<article class="card stack"><div class="section-heading"><div><p class="eyebrow">CATEGORIA</p><h3>${escapeHtml(category.nome)}</h3><p class="muted">${escapeHtml(category.descricao || "")}</p></div>${ui.badge(`${category.dominios.length} domínio(s)`, "neutral")}</div>${category.dominios.map(domain => `<details class="domain-details" open><summary><span><strong>${escapeHtml(domain.nome)}</strong><small>${escapeHtml(domain.descricao || "")}</small></span><span>${domain.competencias.length} competências</span></summary><div class="stack catalog-indent">${domain.competencias.map(comp => `<details class="catalog-competency-details"><summary><span><button class="catalog-competency-title competency-details-button" type="button" data-competency-id="${escapeAttribute(comp.competencia_id)}">${escapeHtml(comp.nome)}</button><small>${comp.niveis.length} níveis · ${countResources(comp)} recursos</small></span><button class="button button-secondary competency-details-button" type="button" data-competency-id="${escapeAttribute(comp.competencia_id)}">Ver detalhes</button></summary><div class="catalog-competency-preview">${comp.niveis.map(level => `<div><strong>${escapeHtml(level.nome)}</strong><span>${level.recursos.length} recurso(s)</span></div>`).join("") || '<p class="muted">Nenhum nível publicado.</p>'}</div></details>`).join("") || '<p class="muted">Nenhuma competência publicada.</p>'}</div></details>`).join("")}</article>`).join("");
-}
 
+  return hierarchy.map(category => `
+    <article class="card catalog-category-card">
+      <header class="section-heading catalog-category-header">
+        <div>
+          <p class="eyebrow">CATEGORIA</p>
+          <h3>${escapeHtml(category.nome)}</h3>
+          <p class="muted">${escapeHtml(category.descricao || "")}</p>
+        </div>
+        ${ui.badge(`${category.dominios.length} domínio(s)`, "neutral")}
+      </header>
+
+      <div class="catalog-domain-list">
+        ${category.dominios.map(domain => `
+          <details class="domain-details">
+            <summary>
+              <span class="domain-summary-copy">
+                <strong>${escapeHtml(domain.nome)}</strong>
+                <small>${escapeHtml(domain.descricao || "")}</small>
+              </span>
+              <span class="domain-summary-meta">
+                <span>${domain.competencias.length} competência(s)</span>
+                <span class="disclosure-icon" aria-hidden="true">⌄</span>
+              </span>
+            </summary>
+
+            <div class="catalog-competency-list">
+              ${domain.competencias.map(comp => `
+                <article class="catalog-competency" data-competency-row="${escapeAttribute(comp.competencia_id)}">
+                  <div class="catalog-competency-header">
+                    <button class="catalog-competency-toggle" type="button" data-toggle-competency="${escapeAttribute(comp.competencia_id)}" aria-expanded="false" aria-controls="preview-${escapeAttribute(comp.competencia_id)}">
+                      <span class="disclosure-icon" aria-hidden="true">›</span>
+                      <span class="sr-only">Expandir resumo de ${escapeHtml(comp.nome)}</span>
+                    </button>
+                    <div class="catalog-competency-copy">
+                      <button class="catalog-competency-title competency-details-button" type="button" data-competency-id="${escapeAttribute(comp.competencia_id)}">${escapeHtml(comp.nome)}</button>
+                      <small>${comp.niveis.length} nível(is) · ${countResources(comp)} recurso(s)</small>
+                    </div>
+                    <button class="button button-secondary competency-details-button" type="button" data-competency-id="${escapeAttribute(comp.competencia_id)}">Detalhes</button>
+                  </div>
+                  <div id="preview-${escapeAttribute(comp.competencia_id)}" class="catalog-competency-preview" hidden>
+                    ${comp.niveis.map(level => `<div class="catalog-level-preview"><strong>${escapeHtml(level.nome)}</strong><span>${level.recursos.length} recurso(s)</span></div>`).join("") || '<p class="muted">Nenhum nível publicado.</p>'}
+                  </div>
+                </article>`).join("") || '<p class="muted">Nenhuma competência publicada.</p>'}
+            </div>
+          </details>`).join("")}
+      </div>
+    </article>`).join("");
+}
 function bindCatalogActions(container) {
   const bindDetails = root => root.querySelectorAll(".competency-details-button").forEach(button => button.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); stateManager.set("selectedCompetencyId", button.dataset.competencyId); eventBus.emit("competency:selected", { competencyId: button.dataset.competencyId }); openCompetencyDetails(button.dataset.competencyId); }));
+  const bindToggles = root => root.querySelectorAll("[data-toggle-competency]").forEach(button => button.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const preview = root.querySelector(`#preview-${CSS.escape(button.dataset.toggleCompetency)}`);
+    if (!preview) return;
+    const willOpen = preview.hidden;
+    preview.hidden = !willOpen;
+    button.setAttribute("aria-expanded", String(willOpen));
+    button.closest(".catalog-competency")?.classList.toggle("is-open", willOpen);
+  }));
   bindDetails(container);
+  bindToggles(container);
   const applyFilters = () => {
     stateManager.patch("catalogFilters", { search: container.querySelector("#catalog-search")?.value ?? "", categoryId: container.querySelector("#catalog-category-filter")?.value ?? "", domainId: container.querySelector("#catalog-domain-filter")?.value ?? "", complexityId: container.querySelector("#catalog-complexity-filter")?.value ?? "" });
     const results = container.querySelector("#catalog-results");
     results.innerHTML = renderCatalogResults(filterHierarchy(dataService.getHierarchy(), stateManager.get("catalogFilters")));
     bindDetails(results);
+    bindToggles(results);
   };
   container.querySelector("#catalog-search")?.addEventListener("input", applyFilters);
   ["catalog-category-filter", "catalog-domain-filter", "catalog-complexity-filter"].forEach(id => container.querySelector(`#${id}`)?.addEventListener("change", applyFilters));
@@ -91,15 +175,88 @@ function openCompetencyDetails(competencyId) {
   dialog.querySelector("#favorite-competency")?.addEventListener("click", event => { userDataService.toggleFavorite(competencyId); event.currentTarget.textContent = userDataService.isFavorite(competencyId) ? "★ Remover favorito" : "☆ Favoritar"; refresh("Favoritos atualizados."); });
   dialog.querySelectorAll(".level-assessment-select").forEach(select => select.addEventListener("change", event => { userDataService.setLevelAssessment(event.currentTarget.dataset.levelId, event.currentTarget.value); refresh(); }));
   dialog.querySelectorAll(".level-planning-select").forEach(select => select.addEventListener("change", event => { const id = event.currentTarget.dataset.levelId; event.currentTarget.value ? userDataService.setLevelPlanningStatus(id, event.currentTarget.value) : userDataService.removeLevelFromPlanning(id); refresh("Planejamento do nível atualizado."); }));
-  dialog.querySelectorAll(".resource-status-select").forEach(select => select.addEventListener("change", event => { userDataService.setResourceStatus(event.currentTarget.dataset.resourceId, event.currentTarget.value); refresh(); }));
+  dialog.querySelectorAll(".resource-status-select").forEach(select => select.addEventListener("change", event => {
+    userDataService.setResourceStatus(event.currentTarget.dataset.resourceId, event.currentTarget.value);
+    refresh("Status do recurso atualizado.");
+  }));
+  dialog.querySelectorAll(".resource-details-form").forEach(form => form.addEventListener("submit", event => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    userDataService.setResourceDetails(event.currentTarget.dataset.resourceId, {
+      evidenceUrl: formData.get("evidenceUrl"),
+      expiresAt: formData.get("expiresAt"),
+      notes: formData.get("notes")
+    });
+    refresh("Detalhes do recurso salvos.");
+  }));
   dialog.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); }); dialog.addEventListener("close", () => dialog.remove()); dialog.showModal();
 }
 
 function renderLevelDetails(level, resources, resourceTypes, assessments) {
   const progress = userDataService.getLevelProgress(level.nivel_id);
   const score = businessEngine.getLevelScore(level.nivel_id);
-  const levelResources = resources.filter(r => r.nivel_id === level.nivel_id).sort(byOrder);
-  return `<details class="level-details"><summary><span><strong>${escapeHtml(level.nome)}</strong><small>${escapeHtml(level.descricao || "")}</small></span><span class="level-summary-score">${score.percentage}% · ${levelResources.length} recurso(s)</span></summary><div class="level-content"><div class="level-controls"><label class="assessment-field"><span>Minha autoavaliação</span><select class="level-assessment-select" data-level-id="${escapeAttribute(level.nivel_id)}">${assessments.map(item => `<option value="${escapeAttribute(item.autoavaliacao_id)}" ${item.autoavaliacao_id === progress?.assessmentId ? "selected" : ""}>${escapeHtml(item.nome)}</option>`).join("")}</select></label><label class="assessment-field"><span>Status no planejamento</span><select class="level-planning-select" data-level-id="${escapeAttribute(level.nivel_id)}"><option value="">Fora do planejamento</option>${planningOptions(progress?.status || "")}</select></label></div><div class="resource-list">${levelResources.map(resource => { const rp = userDataService.getResourceProgress(resource.recurso_id); return `<article class="resource-card"><div><span class="resource-type">${escapeHtml(resourceTypes.get(resource.tipo_recurso_id) || "Recurso")}</span><h4>${escapeHtml(resource.nome)}</h4><p class="muted">${escapeHtml(resource.descricao || "")}</p></div><div class="resource-actions"><select class="resource-status-select" data-resource-id="${escapeAttribute(resource.recurso_id)}"><option value="" ${!rp?.status ? "selected" : ""}>Sem status</option><option value="interesse" ${rp?.status === "interesse" ? "selected" : ""}>Tenho interesse</option><option value="estudando" ${rp?.status === "estudando" ? "selected" : ""}>Estou estudando</option><option value="concluido" ${rp?.status === "concluido" ? "selected" : ""}>Concluído</option></select>${resource.url_principal ? `<a class="button button-secondary" href="${escapeAttribute(resource.url_principal)}" target="_blank" rel="noopener noreferrer">Abrir recurso</a>` : ""}</div></article>`; }).join("") || '<div class="empty-state compact">Nenhum recurso publicado para este nível.</div>'}</div></div></details>`;
+  const levelResources = resources.filter(resource => resource.nivel_id === level.nivel_id).sort(byOrder);
+
+  return `
+    <details class="level-details">
+      <summary>
+        <span><strong>${escapeHtml(level.nome)}</strong><small>${escapeHtml(level.descricao || "")}</small></span>
+        <span class="level-summary-score">${score.percentage}% · ${levelResources.length} recurso(s)</span>
+      </summary>
+      <div class="level-content">
+        <div class="level-controls">
+          <label class="assessment-field">
+            <span>Minha autoavaliação</span>
+            <select class="level-assessment-select" data-level-id="${escapeAttribute(level.nivel_id)}">
+              ${assessments.map(item => `<option value="${escapeAttribute(item.autoavaliacao_id)}" ${item.autoavaliacao_id === progress?.assessmentId ? "selected" : ""}>${escapeHtml(item.nome)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="assessment-field">
+            <span>Status no planejamento</span>
+            <select class="level-planning-select" data-level-id="${escapeAttribute(level.nivel_id)}">
+              <option value="">Fora do planejamento</option>
+              ${planningOptions(progress?.status || "")}
+            </select>
+          </label>
+        </div>
+        <div class="resource-list">
+          ${levelResources.map(resource => renderResourceCard(resource, resourceTypes)).join("") || '<div class="empty-state compact">Nenhum recurso publicado para este nível.</div>'}
+        </div>
+      </div>
+    </details>`;
+}
+
+function renderResourceCard(resource, resourceTypes) {
+  const progress = userDataService.getResourceProgress(resource.recurso_id);
+  return `
+    <article class="resource-card resource-card-detailed">
+      <div class="resource-main-copy">
+        <span class="resource-type">${escapeHtml(resourceTypes.get(resource.tipo_recurso_id) || "Recurso")}</span>
+        <h4>${escapeHtml(resource.nome)}</h4>
+        <p class="muted">${escapeHtml(resource.descricao || "")}</p>
+      </div>
+      <div class="resource-actions">
+        <label class="compact-field">
+          <span class="sr-only">Status do recurso</span>
+          <select class="resource-status-select" data-resource-id="${escapeAttribute(resource.recurso_id)}">
+            <option value="" ${!progress?.status ? "selected" : ""}>Sem status</option>
+            <option value="interesse" ${progress?.status === "interesse" ? "selected" : ""}>Tenho interesse</option>
+            <option value="estudando" ${progress?.status === "estudando" ? "selected" : ""}>Estou estudando</option>
+            <option value="concluido" ${progress?.status === "concluido" ? "selected" : ""}>Concluído</option>
+          </select>
+        </label>
+        ${resource.url_principal ? `<a class="button button-secondary" href="${escapeAttribute(resource.url_principal)}" target="_blank" rel="noopener noreferrer">Abrir recurso</a>` : ""}
+      </div>
+      <details class="resource-personal-details">
+        <summary>Meus detalhes</summary>
+        <form class="resource-details-form" data-resource-id="${escapeAttribute(resource.recurso_id)}">
+          <label><span>Link da evidência</span><input name="evidenceUrl" type="url" value="${escapeAttribute(progress?.evidenceUrl || "")}" placeholder="https://..." /></label>
+          <label><span>Validade / expiração</span><input name="expiresAt" type="date" value="${escapeAttribute(progress?.expiresAt || "")}" /></label>
+          <label class="resource-notes-field"><span>Observações pessoais</span><textarea name="notes" rows="2" placeholder="Anotações sobre este recurso">${escapeHtml(progress?.notes || "")}</textarea></label>
+          <button class="button button-secondary" type="submit">Salvar detalhes</button>
+        </form>
+      </details>
+    </article>`;
 }
 
 function renderTrails() {
@@ -119,17 +276,133 @@ function openTrailDetails(trailId) {
 }
 
 function renderPlanning() {
-  const columns = [["interesse", "Tenho interesse"], ["vou_estudar", "Vou estudar"], ["estudando", "Estudando"], ["concluido", "Concluído"]]; const items = userDataService.getPlanningItems();
-  return `<div class="section-heading"><div><p class="eyebrow">PLANEJAMENTO INDIVIDUAL</p><h3>Planejamento por nível</h3><p class="muted">Cada card representa um nível específico de uma competência.</p></div></div><div class="planning-board">${columns.map(([status, label]) => { const list = items.filter(i => i.status === status); return `<section class="planning-column"><header><strong>${label}</strong>${ui.badge(String(list.length), "neutral")}</header><div class="planning-column-content">${list.map(planningCard).join("") || '<div class="empty-state compact">Nenhum nível.</div>'}</div></section>`; }).join("")}</div>`;
+  const columns = [
+    ["interesse", "Tenho interesse"],
+    ["vou_estudar", "Vou estudar"],
+    ["estudando", "Estudando"],
+    ["concluido", "Concluído"]
+  ];
+  const items = userDataService.getPlanningItems().sort(sortPlanningItems);
+  const withTargetDate = items.filter(item => item.targetDate).length;
+  const highPriority = items.filter(item => Number(item.priority) === 3).length;
+
+  return `
+    <div class="section-heading planning-heading">
+      <div>
+        <p class="eyebrow">PLANEJAMENTO INDIVIDUAL</p>
+        <h3>Planejamento por nível</h3>
+        <p class="muted">Organize status, prioridade, meta e observações de cada nível.</p>
+      </div>
+      <div class="planning-summary">
+        ${ui.badge(`${items.length} nível(is)`, "neutral")}
+        ${ui.badge(`${withTargetDate} com meta`, "neutral")}
+        ${ui.badge(`${highPriority} alta prioridade`, highPriority ? "warning" : "neutral")}
+      </div>
+    </div>
+    <div class="planning-board">
+      ${columns.map(([status, label]) => {
+        const list = items.filter(item => item.status === status);
+        return `<section class="planning-column"><header><strong>${label}</strong>${ui.badge(String(list.length), "neutral")}</header><div class="planning-column-content">${list.map(planningCard).join("") || '<div class="empty-state compact">Nenhum nível.</div>'}</div></section>`;
+      }).join("")}
+    </div>`;
 }
-function planningCard(item) { const level = dataService.getById("niveis", item.levelId); if (!level) return ""; const comp = dataService.getById("competencias", level.competencia_id); const score = businessEngine.getLevelScore(level.nivel_id); return `<article class="planning-card"><div><strong>${escapeHtml(comp?.nome || "Competência")}</strong><p class="muted">${escapeHtml(level.nome)} · ${score.percentage}%</p></div>${ui.progress(score.percentage, level.nome)}<select class="planning-status-select" data-level-id="${level.nivel_id}">${planningOptions(item.status)}<option value="remover">Remover</option></select><button class="button button-secondary planning-open-details" data-competency-id="${level.competencia_id}">Abrir competência</button></article>`; }
-function bindPlanningActions(container) { container.querySelectorAll(".planning-status-select").forEach(s => s.addEventListener("change", e => { const id = e.currentTarget.dataset.levelId; e.currentTarget.value === "remover" ? userDataService.removeLevelFromPlanning(id) : userDataService.setLevelPlanningStatus(id, e.currentTarget.value); renderRoute("planejamento", container); })); container.querySelectorAll(".planning-open-details").forEach(b => b.addEventListener("click", () => openCompetencyDetails(b.dataset.competencyId))); }
+
+function planningCard(item) {
+  const level = dataService.getById("niveis", item.levelId);
+  if (!level) return "";
+  const competency = dataService.getById("competencias", level.competencia_id);
+  const score = businessEngine.getLevelScore(level.nivel_id);
+  const priority = priorityLabel(item.priority);
+
+  return `
+    <article class="planning-card">
+      <div>
+        <strong>${escapeHtml(competency?.nome || "Competência")}</strong>
+        <p class="muted">${escapeHtml(level.nome)} · ${score.percentage}%</p>
+      </div>
+      ${ui.progress(score.percentage, level.nome)}
+      <div class="planning-card-meta">
+        ${priority ? ui.badge(priority, Number(item.priority) === 3 ? "warning" : "neutral") : ""}
+        ${item.targetDate ? `<span>Meta: ${escapeHtml(formatDate(item.targetDate))}</span>` : '<span class="muted">Sem data-meta</span>'}
+      </div>
+      ${item.notes ? `<p class="planning-notes">${escapeHtml(item.notes)}</p>` : ""}
+      <select class="planning-status-select" data-level-id="${escapeAttribute(level.nivel_id)}">
+        ${planningOptions(item.status)}
+        <option value="remover">Remover</option>
+      </select>
+      <div class="planning-card-actions">
+        <button class="button button-secondary planning-edit-details" data-level-id="${escapeAttribute(level.nivel_id)}" type="button">Editar plano</button>
+        <button class="button button-secondary planning-open-details" data-competency-id="${escapeAttribute(level.competencia_id)}" type="button">Abrir competência</button>
+      </div>
+    </article>`;
+}
+
+function bindPlanningActions(container) {
+  container.querySelectorAll(".planning-status-select").forEach(select => select.addEventListener("change", event => {
+    const levelId = event.currentTarget.dataset.levelId;
+    event.currentTarget.value === "remover"
+      ? userDataService.removeLevelFromPlanning(levelId)
+      : userDataService.setLevelPlanningStatus(levelId, event.currentTarget.value);
+    renderRoute("planejamento", container);
+  }));
+  container.querySelectorAll(".planning-open-details").forEach(button => button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId)));
+  container.querySelectorAll(".planning-edit-details").forEach(button => button.addEventListener("click", () => openPlanningDetails(button.dataset.levelId, container)));
+}
+
+function openPlanningDetails(levelId, container) {
+  const level = dataService.getById("niveis", levelId);
+  const competency = level ? dataService.getById("competencias", level.competencia_id) : null;
+  const progress = userDataService.getLevelProgress(levelId);
+  if (!level || !competency || !progress) return;
+
+  document.querySelector("#planning-details-dialog")?.remove();
+  const dialog = document.createElement("dialog");
+  dialog.id = "planning-details-dialog";
+  dialog.className = "competency-dialog planning-details-dialog";
+  dialog.innerHTML = `
+    <article class="competency-dialog-card stack">
+      <header class="competency-dialog-header">
+        <div><p class="eyebrow">PLANEJAMENTO</p><h2>${escapeHtml(competency.nome)}</h2><p class="muted">${escapeHtml(level.nome)}</p></div>
+        <button class="icon-button" type="button" data-close-dialog>×</button>
+      </header>
+      <form id="planning-details-form" class="planning-details-form">
+        <label><span>Prioridade</span><select name="priority"><option value="0" ${!progress.priority ? "selected" : ""}>Sem prioridade</option><option value="3" ${Number(progress.priority) === 3 ? "selected" : ""}>Alta</option><option value="2" ${Number(progress.priority) === 2 ? "selected" : ""}>Média</option><option value="1" ${Number(progress.priority) === 1 ? "selected" : ""}>Baixa</option></select></label>
+        <label><span>Data-meta</span><input name="targetDate" type="date" value="${escapeAttribute(progress.targetDate || "")}" /></label>
+        <label class="planning-notes-field"><span>Observações</span><textarea name="notes" rows="5" placeholder="Próximas ações, materiais ou lembretes">${escapeHtml(progress.notes || "")}</textarea></label>
+        <div class="planning-dialog-actions"><button class="button button-primary" type="submit">Salvar planejamento</button><button class="button button-secondary" type="button" data-close-dialog>Cancelar</button></div>
+      </form>
+      <p id="planning-details-message" class="form-message" role="status"></p>
+    </article>`;
+
+  document.body.appendChild(dialog);
+  dialog.querySelector("#planning-details-form")?.addEventListener("submit", event => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    userDataService.setLevelPlanningDetails(levelId, {
+      priority: formData.get("priority"),
+      targetDate: formData.get("targetDate"),
+      notes: formData.get("notes")
+    });
+    dialog.querySelector("#planning-details-message").textContent = "Planejamento salvo.";
+    renderRoute("planejamento", container);
+    window.setTimeout(() => dialog.close(), 300);
+  });
+  dialog.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => dialog.close()));
+  dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
+  dialog.addEventListener("close", () => dialog.remove());
+  dialog.showModal();
+}
 
 function renderEvolution() { const d = businessEngine.getDashboard(); return `<div class="metric-grid">${ui.metric("Níveis avaliados", String(d.assessedLevels), `${d.totalLevels} disponíveis`)}${ui.metric("Recursos concluídos", String(d.completedResources))}${ui.metric("Certificações concluídas", String(d.completedCertifications))}${ui.metric("Níveis no planejamento", String(d.planningItems))}</div>${ui.card(`<h3>Retrato atual</h3><p class="muted">O histórico temporal será incluído futuramente. Neste momento, esta tela mostra o estado atual.</p>${ui.progress(d.general.percentage, `Nível geral: ${d.general.percentage}%`)}`, "evolution-card")}`; }
 function renderAdministration() { const report = dataService.getHealthReport(); const datasets = Object.entries(report.datasets ?? {}); const errors = datasets.reduce((s,[,i]) => s+i.errors.length,0); const warnings = datasets.reduce((s,[,i]) => s+i.warnings.length,0); return `<div class="metric-grid">${ui.metric("Versão do esquema", report.schemaVersion ?? "-")}${ui.metric("Versão dos dados", report.dataVersion ?? "-")}${ui.metric("Erros", String(errors))}${ui.metric("Avisos", String(warnings))}</div><section class="admin-health-section">${ui.card(`<div><p class="eyebrow">PUBLICAÇÃO DE DADOS</p><h3>Saúde dos conjuntos de dados</h3><p class="muted">Confira disponibilidade, registros e validações de cada arquivo.</p></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Dataset</th><th>Estado</th><th>Registros</th><th>Arquivo</th><th>Mensagens</th></tr></thead><tbody>${datasets.map(([n,i]) => `<tr><td><strong>${escapeHtml(n)}</strong></td><td>${ui.badge(i.state,i.state)}</td><td>${i.count}</td><td><code>${escapeHtml(i.path || "-")}</code></td><td>${[...i.errors,...i.warnings].map(escapeHtml).join("<br>") || "OK"}</td></tr>`).join("")}</tbody></table></div>`, "stack")}</section>`; }
 function renderProfile() { const user = currentUser(); return ui.card(`<div><p class="eyebrow">PERFIL LOCAL</p><h3>${escapeHtml(user?.name ?? "Perfil")}</h3><p class="muted">Permissão: ${escapeHtml(user?.role ?? "USER")}</p></div><div class="data-actions"><button id="export-backup" class="button button-primary">Exportar backup técnico</button><label class="button button-secondary" for="import-backup">Importar e substituir dados</label><input id="import-backup" class="hidden" type="file" accept="application/json,.json" /></div><p class="muted">A importação é substitutiva.</p><p id="backup-message" class="form-message"></p>`, "stack"); }
 function bindProfileActions(container) { container.querySelector("#export-backup")?.addEventListener("click", exportTechnicalBackup); container.querySelector("#import-backup")?.addEventListener("change", async e => { const m=container.querySelector("#backup-message"); try { const [f]=e.target.files; if(!f)return; await importTechnicalBackup(f); m.textContent="Backup importado. A página será recarregada."; window.location.reload(); } catch(err){m.textContent=err.message;} }); }
 
+function priorityLabel(value) { return ({ 3: "Alta", 2: "Média", 1: "Baixa" })[Number(value)] || ""; }
+function sortPlanningItems(a, b) { return Number(b.priority || 0) - Number(a.priority || 0) || String(a.targetDate || "9999-12-31").localeCompare(String(b.targetDate || "9999-12-31")); }
+function formatDate(value) { if (!value) return ""; const [year, month, day] = String(value).split("-"); return year && month && day ? `${day}/${month}/${year}` : value; }
+
 function filterHierarchy(hierarchy, filters) { const term=filters.search.trim().toLocaleLowerCase("pt-BR"); return hierarchy.map(c=>({...c,dominios:c.dominios.map(d=>({...d,competencias:d.competencias.filter(comp=>{const text=`${c.nome} ${d.nome} ${comp.nome} ${comp.descricao||""} ${comp.niveis.flatMap(l=>l.recursos).map(r=>r.nome).join(" ")}`.toLocaleLowerCase("pt-BR"); return(!filters.categoryId||c.categoria_id===filters.categoryId)&&(!filters.domainId||d.dominio_id===filters.domainId)&&(!filters.complexityId||comp.complexidade_id===filters.complexityId)&&(!term||text.includes(term));})})).filter(d=>d.competencias.length)})).filter(c=>c.dominios.length); }
 function selectField(label,id,options,valueColumn,selected){return `<label class="filter-field"><span>${escapeHtml(label)}</span><select id="${id}"><option value="">Todos</option>${options.map(o=>`<option value="${escapeAttribute(o[valueColumn])}" ${o[valueColumn]===selected?"selected":""}>${escapeHtml(o.nome)}</option>`).join("")}</select></label>`;}
+function safeNumber(value){const number=Number(value);return Number.isFinite(number)?number:0;}
 function countResources(c){return c.niveis.reduce((s,l)=>s+l.recursos.length,0);} function categoryBar(c,p=0){return `<div class="category-progress"><div><strong>${escapeHtml(c.nome)}</strong><span>${p}%</span></div>${ui.progress(p,`${c.nome}: ${p}%`)}</div>`;} function planningOptions(selected=""){return [["interesse","Tenho interesse"],["vou_estudar","Vou estudar"],["estudando","Estudando"],["concluido","Concluído"]].map(([v,l])=>`<option value="${v}" ${v===selected?"selected":""}>${l}</option>`).join("");} function byOrder(a,b){return Number(a.ordem||0)-Number(b.ordem||0);}
