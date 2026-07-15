@@ -1,9 +1,5 @@
-# Climb Map — Sprint 2.4
+# Climb Map — Sprint 2.6
 
-Atualização incremental para planejamento detalhado por nível e registro de evidências dos recursos.
+Atualização com Meu Mapa operacional, histórico para Evolução, distinção visual entre competência e recursos, trilhas pessoais por `usuario_destino` e planejamento com recursos em verde.
 
-Não contém a pasta `data` e não substitui os CSVs publicados.
-
-
-## Atualização 2.5
-Correções de UX, heatmap, cursos em andamento, trilhas por tipo e planejamento misto.
+Os CSVs existentes não estão incluídos neste pacote.

@@ -5,8 +5,8 @@ import { ui, escapeHtml, escapeAttribute } from "../components/ui.js";
 import { exportTechnicalBackup, importTechnicalBackup } from "../services/backup-service.js";
 import { configService } from "../services/config-service.js";
 import { dataService } from "../services/data-service.js";
-import { userDataService } from "../services/user-data-service.js?v=2.5.0";
-import { businessEngine } from "../business/business-engine.js?v=2.5.0";
+import { userDataService } from "../services/user-data-service.js?v=2.6.0";
+import { businessEngine } from "../business/business-engine.js?v=2.6.0";
 
 export function renderRoute(route, container) {
   const renderers = { mapa: renderMap, catalogo: renderCatalog, trilhas: renderTrails, planejamento: renderPlanning, evolucao: renderEvolution, perfil: renderProfile, administracao: renderAdministration };
@@ -23,62 +23,50 @@ function bindRouteActions(route, container) {
 }
 
 function renderMap() {
-  const raw = businessEngine.getDashboard() ?? {};
-  const generalPercentage = safeNumber(raw.general?.percentage);
-  const assessedLevels = safeNumber(raw.assessedLevels);
-  const totalLevels = safeNumber(raw.totalLevels);
-  const planningItems = safeNumber(raw.planningItems);
-  const studyingNow = safeNumber(raw.studyingNow ?? raw.studyingLevels);
-  const completedResources = safeNumber(raw.completedResources);
-  const completedCertifications = safeNumber(raw.completedCertifications);
-  const favorites = safeNumber(raw.favorites);
-  const categories = Array.isArray(raw.categories) ? raw.categories : [];
-  const highest = raw.highestCategory?.score ? raw.highestCategory : null;
-  const selectedTrail = raw.selectedTrail ?? null;
-  const inProgressCourses = Array.isArray(raw.inProgressCourses) ? raw.inProgressCourses : [];
+  const dashboard = businessEngine.getDashboard() ?? {};
+  const operational = businessEngine.getOperationalMap() ?? {};
+  const categories = Array.isArray(dashboard.categories) ? dashboard.categories : [];
+  const developingLevels = Array.isArray(operational.developingLevels) ? operational.developingLevels : [];
+  const activeResources = Array.isArray(operational.activeResources) ? operational.activeResources : [];
 
   return `
-    <section class="dashboard-hero-grid" aria-label="Indicadores principais">
-      ${dashboardMetric("Nível geral", `${generalPercentage}%`, `${assessedLevels} de ${totalLevels} níveis avaliados`, "blue")}
-      ${dashboardMetric("Categoria com maior nota", highest ? `${highest.nome}` : "Sem avaliações", highest ? `${safeNumber(highest.score.percentage)}% de domínio` : "Avalie níveis para gerar este indicador", "purple")}
-      <a class="dashboard-metric dashboard-metric-link tone-green" href="#/planejamento" aria-label="Abrir planejamento">
-        <span>No planejamento</span><strong>${planningItems}</strong><small>Abrir planejamento →</small>
-      </a>
-      ${dashboardMetric("Estudando agora", String(studyingNow), "Níveis e recursos em andamento", "orange")}
-    </section>
-
-    <section class="dashboard-mini-grid" aria-label="Indicadores complementares">
-      ${dashboardMetric("Recursos concluídos", String(completedResources), "", "teal", true)}
-      ${dashboardMetric("Certificações concluídas", String(completedCertifications), "", "pink", true)}
-      ${dashboardMetric("Favoritos", String(favorites), "", "yellow", true)}
-      ${dashboardMetric("Trilha acompanhada", selectedTrail ? selectedTrail.trail.nome : "Nenhuma", selectedTrail ? `${safeNumber(selectedTrail.score?.percentage)}% concluído` : "Escolha uma trilha", "indigo", true)}
+    <section class="map-summary-strip" aria-label="Resumo do momento">
+      ${mapSummaryMetric("Competências em desenvolvimento", developingLevels.length, "Níveis em estudo ou prontos para iniciar", "blue")}
+      ${mapSummaryMetric("Cursos e recursos em andamento", activeResources.length, "Materiais escolhidos para estudo", "green")}
+      ${mapSummaryMetric("Recursos concluídos", safeNumber(dashboard.completedResources), "Cursos, certificados e outros materiais", "purple")}
+      ${mapSummaryMetric("Progresso do plano", `${safeNumber(operational.planProgress)}%`, `${safeNumber(operational.planCompleted)} de ${safeNumber(operational.planTotal)} níveis concluídos`, "orange")}
     </section>
 
     ${ui.card(`
-      <div class="section-heading dashboard-section-heading">
-        <div><p class="eyebrow">MAPA DE CALOR</p><h3>Conhecimento por categoria</h3><p class="muted">Quanto mais intensa a cor, maior sua nota consolidada.</p></div>
+      <div class="section-heading map-section-heading">
+        <div><p class="eyebrow">FOCO ATUAL</p><h3>Competências em desenvolvimento</h3><p class="muted">Use esta área para decidir o que estudar agora.</p></div>
+        <a class="text-link" href="#/planejamento">Abrir planejamento</a>
       </div>
-      <div class="category-heatmap">
+      <div class="development-grid">
+        ${developingLevels.map(item => developmentCard(item)).join("") || '<div class="empty-state compact">Nenhum nível em desenvolvimento. Adicione um nível ao planejamento pelo Catálogo ou por uma Trilha.</div>'}
+      </div>`, "map-section map-development-section")}
+
+    ${ui.card(`
+      <div class="section-heading map-section-heading">
+        <div><p class="eyebrow">ESTUDOS ATIVOS</p><h3>Cursos e recursos em andamento</h3><p class="muted">Materiais que você decidiu usar no desenvolvimento das competências.</p></div>
+      </div>
+      <div class="active-resource-list">
+        ${activeResources.map(activeResourceCard).join("") || '<div class="empty-state compact">Nenhum curso ou recurso em andamento.</div>'}
+      </div>`, "map-section map-resources-section")}
+
+    ${ui.card(`
+      <div class="section-heading map-section-heading">
+        <div><p class="eyebrow">HEATMAP OPERACIONAL</p><h3>Conhecimento por categoria</h3><p class="muted">Cinza indica ausência de avaliação. Tons mais intensos representam maior domínio consolidado.</p></div>
+      </div>
+      <div class="category-heatmap operational-heatmap">
         ${categories.map(categoryHeatmapTile).join("") || '<div class="empty-state compact">Nenhuma categoria publicada.</div>'}
-      </div>`, "dashboard-section heatmap-section")}
+      </div>`, "map-section heatmap-section")}
 
     ${ui.card(`
-      <div class="section-heading dashboard-section-heading">
-        <div><p class="eyebrow">CURSOS EM ANDAMENTO</p><h3>Continue de onde parou</h3></div>
-        <a class="text-link" href="#/planejamento">Ver planejamento</a>
-      </div>
-      <div class="in-progress-course-list">
-        ${inProgressCourses.map(course => `
-          <article class="in-progress-course-card">
-            <span class="course-status-dot" aria-hidden="true"></span>
-            <div><strong>${escapeHtml(course.nome)}</strong><small>${escapeHtml(course.competencyName || course.levelName || "Curso")}</small></div>
-            ${course.url ? `<a class="button button-secondary" href="${escapeAttribute(course.url)}" target="_blank" rel="noopener noreferrer">Continuar</a>` : `<button class="button button-secondary competency-details-button" data-competency-id="${escapeAttribute(course.competencyId || "")}">Detalhes</button>`}
-          </article>`).join("") || '<div class="empty-state compact">Nenhum curso em andamento.</div>'}
-      </div>`, "dashboard-section courses-section")}
-
-    ${selectedTrail
-      ? ui.card(`<p class="eyebrow">TRILHA ACOMPANHADA</p><h3>${escapeHtml(selectedTrail.trail.nome)}</h3><p class="muted">${safeNumber(selectedTrail.completed)} de ${safeNumber(selectedTrail.total)} requisitos atendidos.</p>${ui.progress(safeNumber(selectedTrail.score?.percentage), `${selectedTrail.trail.nome}: ${safeNumber(selectedTrail.score?.percentage)}%`)}<div class="quick-actions"><a class="button button-secondary" href="#/trilhas">Ver trilha</a></div>`, "stack dashboard-section")
-      : ui.card(`<p class="eyebrow">TRILHAS</p><h3>Nenhuma trilha acompanhada</h3><p class="muted">Escolha uma trilha para acompanhar seu progresso.</p><a class="button button-secondary" href="#/trilhas">Escolher trilha</a>`, "stack dashboard-section")}`;
+      <div class="section-heading map-section-heading"><div><p class="eyebrow">PRÓXIMOS PASSOS</p><h3>Ações objetivas</h3></div></div>
+      <div class="next-action-list">
+        ${buildNextActions(developingLevels, activeResources).join("") || '<div class="empty-state compact">Nenhuma ação pendente identificada.</div>'}
+      </div>`, "map-section next-steps-section")}`;
 }
 
 function bindMapActions(container) {
@@ -314,7 +302,12 @@ function renderResourceCard(resource, resourceTypes, competencyId = "") {
 function renderTrails() {
   const trails = dataService.getAll("trilhas", { activeOnly: true }).sort(sortTrails);
   const selected = userDataService.getSelectedTrailId();
-  const personTrails = trails.filter(trail => trailKind(trail) === "pessoa");
+  const userName = String(currentUser()?.name || "").trim().toLocaleLowerCase("pt-BR");
+  const personTrails = trails.filter(trail => {
+    if (trailKind(trail) !== "pessoa") return false;
+    const destination = String(trail.usuario_destino || "").trim().toLocaleLowerCase("pt-BR");
+    return !destination || destination === userName;
+  });
   const careerTrails = trails.filter(trail => trailKind(trail) === "carreira");
 
   return `
@@ -471,7 +464,31 @@ function openPlanningDetails(levelId, container) {
   dialog.showModal();
 }
 
-function renderEvolution() { const d = businessEngine.getDashboard(); return `<div class="metric-grid">${ui.metric("Níveis avaliados", String(d.assessedLevels), `${d.totalLevels} disponíveis`)}${ui.metric("Recursos concluídos", String(d.completedResources))}${ui.metric("Certificações concluídas", String(d.completedCertifications))}${ui.metric("Níveis no planejamento", String(d.planningItems))}</div>${ui.card(`<h3>Retrato atual</h3><p class="muted">O histórico temporal será incluído futuramente. Neste momento, esta tela mostra o estado atual.</p>${ui.progress(d.general.percentage, `Nível geral: ${d.general.percentage}%`)}`, "evolution-card")}`; }
+function renderEvolution() {
+  const data = businessEngine.getEvolutionData();
+  const user = currentUser();
+  const timeline = data.history.slice(0, 20);
+  return `
+    <section class="evolution-profile-header">
+      <div><p class="eyebrow">EVOLUÇÃO PROFISSIONAL</p><h2>${escapeHtml(user?.name || "Profissional")}</h2><p class="muted">Esta página reúne evidências e marcos registrados no Climb Map.</p></div>
+      <button class="button button-secondary" type="button" disabled title="Será habilitado em uma próxima entrega">Gerar visão compartilhável</button>
+    </section>
+    <section class="evolution-metric-grid">
+      ${dashboardMetric("Níveis adquiridos", String(safeNumber(data.completedLevels)), "Níveis marcados como concluídos", "green", true)}
+      ${dashboardMetric("Em desenvolvimento", String(safeNumber(data.developingLevels)), "Níveis em estudo", "blue", true)}
+      ${dashboardMetric("Recursos concluídos", String(safeNumber(data.completedResources)), "Formações e materiais finalizados", "purple", true)}
+      ${dashboardMetric("Evidências adicionadas", String(safeNumber(data.evidenceCount)), "Links de projetos ou certificados", "orange", true)}
+      ${dashboardMetric("Nível geral", `${safeNumber(data.general?.percentage)}%`, "Conhecimento consolidado", "teal", true)}
+      ${dashboardMetric("Aderência à trilha", data.selectedTrail ? `${safeNumber(data.selectedTrail.score?.percentage)}%` : "Sem trilha", data.selectedTrail?.trail?.nome || "Escolha uma trilha para acompanhar", "indigo", true)}
+    </section>
+    ${ui.card(`
+      <div class="section-heading"><div><p class="eyebrow">MARCOS E EVIDÊNCIAS</p><h3>Linha do tempo</h3><p class="muted">O histórico começou a ser registrado a partir desta versão. Alterações anteriores não são reconstruídas artificialmente.</p></div></div>
+      <div class="evolution-timeline">
+        ${timeline.map(historyEventCard).join("") || '<div class="empty-state compact">Nenhum marco registrado ainda. Alterações de autoavaliação, início e conclusão passarão a aparecer aqui.</div>'}
+      </div>`, "evolution-section")}
+    ${ui.card(`<div class="section-heading"><div><p class="eyebrow">COMPETÊNCIAS DE DESTAQUE</p><h3>Forças atuais</h3></div></div><div class="category-heatmap">${(businessEngine.getDashboard().categories || []).sort((a,b)=>safeNumber(b.score?.percentage)-safeNumber(a.score?.percentage)).slice(0,6).map(categoryHeatmapTile).join("")}</div>`, "evolution-section")}`;
+}
+
 function renderAdministration() { const report = dataService.getHealthReport(); const datasets = Object.entries(report.datasets ?? {}); const errors = datasets.reduce((s,[,i]) => s+i.errors.length,0); const warnings = datasets.reduce((s,[,i]) => s+i.warnings.length,0); return `<div class="metric-grid">${ui.metric("Versão do esquema", report.schemaVersion ?? "-")}${ui.metric("Versão dos dados", report.dataVersion ?? "-")}${ui.metric("Erros", String(errors))}${ui.metric("Avisos", String(warnings))}</div><section class="admin-health-section">${ui.card(`<div><p class="eyebrow">PUBLICAÇÃO DE DADOS</p><h3>Saúde dos conjuntos de dados</h3><p class="muted">Confira disponibilidade, registros e validações de cada arquivo.</p></div><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Dataset</th><th>Estado</th><th>Registros</th><th>Arquivo</th><th>Mensagens</th></tr></thead><tbody>${datasets.map(([n,i]) => `<tr><td><strong>${escapeHtml(n)}</strong></td><td>${ui.badge(i.state,i.state)}</td><td>${i.count}</td><td><code>${escapeHtml(i.path || "-")}</code></td><td>${[...i.errors,...i.warnings].map(escapeHtml).join("<br>") || "OK"}</td></tr>`).join("")}</tbody></table></div>`, "stack")}</section>`; }
 function renderProfile() { const user = currentUser(); return ui.card(`<div><p class="eyebrow">PERFIL LOCAL</p><h3>${escapeHtml(user?.name ?? "Perfil")}</h3><p class="muted">Permissão: ${escapeHtml(user?.role ?? "USER")}</p></div><div class="data-actions"><button id="export-backup" class="button button-primary">Exportar backup técnico</button><label class="button button-secondary" for="import-backup">Importar e substituir dados</label><input id="import-backup" class="hidden" type="file" accept="application/json,.json" /></div><p class="muted">A importação é substitutiva.</p><p id="backup-message" class="form-message"></p>`, "stack"); }
 function bindProfileActions(container) { container.querySelector("#export-backup")?.addEventListener("click", exportTechnicalBackup); container.querySelector("#import-backup")?.addEventListener("change", async e => { const m=container.querySelector("#backup-message"); try { const [f]=e.target.files; if(!f)return; await importTechnicalBackup(f); m.textContent="Backup importado. A página será recarregada."; window.location.reload(); } catch(err){m.textContent=err.message;} }); }
@@ -482,6 +499,40 @@ function formatDate(value) { if (!value) return ""; const [year, month, day] = S
 
 function filterHierarchy(hierarchy, filters) { const term=filters.search.trim().toLocaleLowerCase("pt-BR"); return hierarchy.map(c=>({...c,dominios:c.dominios.map(d=>({...d,competencias:d.competencias.filter(comp=>{const text=`${c.nome} ${d.nome} ${comp.nome} ${comp.descricao||""} ${comp.niveis.flatMap(l=>l.recursos).map(r=>r.nome).join(" ")}`.toLocaleLowerCase("pt-BR"); return(!filters.categoryId||c.categoria_id===filters.categoryId)&&(!filters.domainId||d.dominio_id===filters.domainId)&&(!filters.complexityId||comp.complexidade_id===filters.complexityId)&&(!term||text.includes(term));})})).filter(d=>d.competencias.length)})).filter(c=>c.dominios.length); }
 function selectField(label,id,options,valueColumn,selected){return `<label class="filter-field"><span>${escapeHtml(label)}</span><select id="${id}"><option value="">Todos</option>${options.map(o=>`<option value="${escapeAttribute(o[valueColumn])}" ${o[valueColumn]===selected?"selected":""}>${escapeHtml(o.nome)}</option>`).join("")}</select></label>`;}
+
+function mapSummaryMetric(label, value, helper, tone) {
+  return `<article class="map-summary-card tone-${tone}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(helper || "")}</small></article>`;
+}
+function developmentCard(item) {
+  return `<article class="development-card">
+    <div class="development-card-top"><span class="development-category">${escapeHtml(item.category?.nome || "Sem categoria")}</span><span>${planningStatusLabel(item.status)}</span></div>
+    <h4>${escapeHtml(item.level.nome)}</h4>
+    <p class="muted">${escapeHtml(item.competency.nome)}</p>
+    <div class="development-meta"><span>Nota atual <strong>${safeNumber(item.score?.percentage)}%</strong></span>${item.targetDate ? `<span>Prazo <strong>${escapeHtml(formatDate(item.targetDate))}</strong></span>` : ""}</div>
+    ${ui.progress(safeNumber(item.score?.percentage), `${item.level.nome}: ${safeNumber(item.score?.percentage)}%`)}
+    <p class="development-next"><strong>Próximo passo:</strong> ${escapeHtml(item.nextAction)}</p>
+    <button class="button button-secondary competency-details-button" data-competency-id="${escapeAttribute(item.competency.competencia_id)}">Abrir competência</button>
+  </article>`;
+}
+function activeResourceCard(item) {
+  return `<article class="active-resource-card">
+    <div><span class="resource-type">${escapeHtml(item.resourceType)}</span><h4>${escapeHtml(item.resource.nome)}</h4><p class="muted">${escapeHtml(item.competency.nome)} · ${escapeHtml(item.level.nome)}</p></div>
+    <div class="active-resource-meta"><span>${planningStatusLabel(item.status)}</span>${item.startedAt ? `<small>Iniciado em ${escapeHtml(formatDate(item.startedAt.slice(0,10)))}</small>` : ""}</div>
+    ${item.resource.url_principal ? `<a class="button button-primary" href="${escapeAttribute(item.resource.url_principal)}" target="_blank" rel="noopener noreferrer">Continuar estudando</a>` : `<button class="button button-secondary competency-details-button" data-competency-id="${escapeAttribute(item.competency.competencia_id)}">Abrir detalhes</button>`}
+  </article>`;
+}
+function buildNextActions(levels, resources) {
+  const actions = [];
+  levels.slice(0, 4).forEach(item => actions.push(`<button class="next-action-item competency-details-button" data-competency-id="${escapeAttribute(item.competency.competencia_id)}"><span>Continuar</span><strong>${escapeHtml(item.level.nome)}</strong><small>${escapeHtml(item.competency.nome)}</small></button>`));
+  resources.filter(item => item.status === "vou_estudar").slice(0, 3).forEach(item => actions.push(`<button class="next-action-item competency-details-button" data-competency-id="${escapeAttribute(item.competency.competencia_id)}"><span>Iniciar recurso</span><strong>${escapeHtml(item.resource.nome)}</strong><small>${escapeHtml(item.competency.nome)}</small></button>`));
+  return actions;
+}
+function historyEventCard(event) {
+  const labels = { autoavaliacao_alterada: "Autoavaliação atualizada", nivel_planejado: "Nível planejado", nivel_iniciado: "Nível iniciado", nivel_concluido: "Nível concluído", recurso_planejado: "Recurso planejado", recurso_iniciado: "Recurso iniciado", recurso_concluido: "Recurso concluído", evidencia_adicionada: "Evidência adicionada" };
+  const entity = event.entityType === "nivel" ? dataService.getById("niveis", event.entityId) : event.entityType === "recurso" ? dataService.getById("recursos", event.entityId) : null;
+  return `<article class="timeline-event"><time>${escapeHtml(formatDateTime(event.occurredAt))}</time><div><strong>${escapeHtml(labels[event.type] || event.type || "Atualização")}</strong><p class="muted">${escapeHtml(entity?.nome || event.description || "Registro atualizado")}</p></div></article>`;
+}
+function formatDateTime(value) { if (!value) return ""; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("pt-BR", { dateStyle:"short", timeStyle:"short" }); }
 
 function dashboardMetric(label, value, helper = "", tone = "blue", compact = false) {
   return `<article class="dashboard-metric tone-${tone} ${compact ? "is-compact" : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${helper ? `<small>${escapeHtml(helper)}</small>` : ""}</article>`;

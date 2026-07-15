@@ -60,8 +60,11 @@ class UserDataService {
   setLevelAssessment(levelId, assessmentId) {
     return this.updateUserData(data => {
       const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
+      const previous = item.assessmentId || "";
+      if (previous === assessmentId) return;
       item.assessmentId = assessmentId;
       item.updatedAt = new Date().toISOString();
+      appendHistory(data, { type: "autoavaliacao_alterada", entityType: "nivel", entityId: levelId, previousValue: previous, newValue: assessmentId });
     });
   }
 
@@ -69,10 +72,14 @@ class UserDataService {
     return this.updateUserData(data => {
       const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
       const now = new Date().toISOString();
+      const previous = item.status || "";
+      if (previous === status) return;
       item.status = status;
       if (status === "estudando" && !item.startedAt) item.startedAt = now;
       item.completedAt = status === "concluido" ? now : "";
       item.updatedAt = now;
+      const type = status === "concluido" ? "nivel_concluido" : status === "estudando" ? "nivel_iniciado" : "nivel_planejado";
+      appendHistory(data, { type, entityType: "nivel", entityId: levelId, previousValue: previous, newValue: status });
     });
   }
 
@@ -83,7 +90,9 @@ class UserDataService {
       if (Object.hasOwn(details, "priority")) item.priority = Number(details.priority) || 0;
       if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
       if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
+      const previousEvidence = item.evidenceUrl || "";
       item.updatedAt = new Date().toISOString();
+      if (!previousEvidence && item.evidenceUrl) appendHistory(data, { type: "evidencia_adicionada", entityType: "recurso", entityId: resourceId, newValue: item.evidenceUrl });
     });
   }
 
@@ -133,10 +142,14 @@ class UserDataService {
     return this.updateUserData(data => {
       const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
       const now = new Date().toISOString();
+      const previous = item.status || "";
+      if (previous === status) return;
       item.status = status;
       if (status === "estudando" && !item.startedAt) item.startedAt = now;
       item.completedAt = status === "concluido" ? now : "";
       item.updatedAt = now;
+      const type = status === "concluido" ? "recurso_concluido" : status === "estudando" ? "recurso_iniciado" : "recurso_planejado";
+      appendHistory(data, { type, entityType: "recurso", entityId: resourceId, previousValue: previous, newValue: status });
     });
   }
 
@@ -144,15 +157,29 @@ class UserDataService {
   setResourceDetails(resourceId, details = {}) {
     return this.updateUserData(data => {
       const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
+      const previousEvidence = item.evidenceUrl || "";
       if (Object.hasOwn(details, "expiresAt")) item.expiresAt = String(details.expiresAt || "");
       if (Object.hasOwn(details, "evidenceUrl")) item.evidenceUrl = String(details.evidenceUrl || "").trim();
       if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
       item.updatedAt = new Date().toISOString();
+      if (!previousEvidence && item.evidenceUrl) appendHistory(data, { type: "evidencia_adicionada", entityType: "recurso", entityId: resourceId, newValue: item.evidenceUrl });
     });
   }
 
   getResourceProgress(resourceId) {
     return this.getCurrentUserData().resourceProgress.find(item => item.resourceId === resourceId) ?? null;
+  }
+
+  getHistory() {
+    return this.getCurrentUserData().history
+      .slice()
+      .sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+  }
+
+  addHistoryEvent(event = {}) {
+    return this.updateUserData(data => {
+      appendHistory(data, event);
+    });
   }
 
   updateUserData(mutator) {
@@ -213,9 +240,24 @@ function normalizeUserData(data) {
     favorites: Array.isArray(data.favorites) ? data.favorites : [],
     selectedTrailId: typeof data.selectedTrailId === "string" ? data.selectedTrailId : "",
     selectedTrailUpdatedAt: data.selectedTrailUpdatedAt ?? null,
+    history: Array.isArray(data.history) ? data.history : [],
     levelModelMigrated: Boolean(data.levelModelMigrated),
     levelModelMigratedAt: data.levelModelMigratedAt ?? null
   };
+}
+
+function appendHistory(data, event) {
+  data.history = Array.isArray(data.history) ? data.history : [];
+  data.history.push({
+    eventId: `EVT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    occurredAt: new Date().toISOString(),
+    type: String(event.type || "alteracao"),
+    entityType: String(event.entityType || ""),
+    entityId: String(event.entityId || ""),
+    previousValue: event.previousValue ?? "",
+    newValue: event.newValue ?? "",
+    description: String(event.description || "")
+  });
 }
 
 function createEmptyUserData() { return normalizeUserData({}); }

@@ -91,6 +91,78 @@ class BusinessEngine {
     return id ? this.getTrailAnalysis(id) : null;
   }
 
+
+  getOperationalMap() {
+    this.prepareUserData();
+    const userData = userDataService.getCurrentUserData();
+    const levels = dataService.getAll("niveis", { activeOnly: true });
+    const competencies = dataService.getAll("competencias", { activeOnly: true });
+    const domains = dataService.getAll("dominios", { activeOnly: true });
+    const categories = dataService.getAll("categorias", { activeOnly: true });
+    const resources = dataService.getAll("recursos", { activeOnly: true });
+    const resourceTypes = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, String(item.nome || "")]));
+
+    const developingLevels = userData.levelProgress
+      .filter(item => ["vou_estudar", "estudando"].includes(item.status))
+      .map(progress => {
+        const level = levels.find(item => item.nivel_id === progress.levelId);
+        const competency = level ? competencies.find(item => item.competencia_id === level.competencia_id) : null;
+        const domain = competency ? domains.find(item => item.dominio_id === competency.dominio_id) : null;
+        const category = domain ? categories.find(item => item.categoria_id === domain.categoria_id) : null;
+        if (!level || !competency) return null;
+        return {
+          ...progress,
+          level,
+          competency,
+          category,
+          score: this.getLevelScore(level.nivel_id),
+          nextAction: progress.notes || (progress.status === "estudando" ? "Continuar o estudo deste nível" : "Iniciar o estudo deste nível")
+        };
+      }).filter(Boolean)
+      .sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0) || String(a.targetDate || "9999-12-31").localeCompare(String(b.targetDate || "9999-12-31")));
+
+    const activeResources = userData.resourceProgress
+      .filter(item => ["vou_estudar", "estudando"].includes(item.status))
+      .map(progress => {
+        const resource = resources.find(item => item.recurso_id === progress.resourceId);
+        const level = resource ? levels.find(item => item.nivel_id === resource.nivel_id) : null;
+        const competency = level ? competencies.find(item => item.competencia_id === level.competencia_id) : null;
+        if (!resource || !level || !competency) return null;
+        return { ...progress, resource, level, competency, resourceType: resourceTypes.get(resource.tipo_recurso_id) || "Recurso" };
+      }).filter(Boolean);
+
+    const planItems = userData.levelProgress.filter(item => item.status);
+    const planCompleted = planItems.filter(item => item.status === "concluido").length;
+    return {
+      developingLevels,
+      activeResources,
+      planProgress: planItems.length ? Math.round((planCompleted / planItems.length) * 100) : 0,
+      planCompleted,
+      planTotal: planItems.length,
+      recentActivity: userData.history.slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 8)
+    };
+  }
+
+  getEvolutionData() {
+    this.prepareUserData();
+    const userData = userDataService.getCurrentUserData();
+    const history = userData.history.slice().sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+    const completedResources = userData.resourceProgress.filter(item => item.status === "concluido");
+    const evidenceCount = userData.resourceProgress.filter(item => item.evidenceUrl).length;
+    const completedLevels = userData.levelProgress.filter(item => item.status === "concluido").length;
+    const developingLevels = userData.levelProgress.filter(item => ["vou_estudar", "estudando"].includes(item.status)).length;
+    return {
+      history,
+      completedLevels,
+      developingLevels,
+      plannedLevels: userData.levelProgress.filter(item => item.status).length,
+      completedResources: completedResources.length,
+      evidenceCount,
+      general: this.getGeneralScore(),
+      selectedTrail: this.getSelectedTrailAnalysis()
+    };
+  }
+
   getDashboard() {
     this.prepareUserData();
     const userData = userDataService.getCurrentUserData();
