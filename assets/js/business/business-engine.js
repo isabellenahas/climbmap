@@ -96,6 +96,32 @@ class BusinessEngine {
     };
   }
 
+
+  getEvolutionSummary() {
+    this.prepareUserData();
+    const userData = userDataService.getCurrentUserData();
+    const resources = dataService.getAll("recursos", { activeOnly: true });
+    const resourceTypes = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, String(item.nome || "")]));
+    const completedResources = userData.resourceProgress.filter(item => item.status === "concluido");
+    const selectedTrailId = userData.selectedTrailId;
+    const selectedTrail = selectedTrailId ? dataService.getById("trilhas", selectedTrailId) : null;
+    const trailAnalysis = selectedTrail ? this.getTrailAnalysis(selectedTrailId) : null;
+
+    return {
+      completedCompetencies: userData.competencyProgress.filter(item => item.status === "concluido").length,
+      developingCompetencies: userData.competencyProgress.filter(item => item.status === "em_andamento").length,
+      plannedCompetencies: userData.competencyProgress.filter(item => ["stand_by", "em_aberto"].includes(item.status)).length,
+      completedResources: completedResources.length,
+      completedCertifications: completedResources.filter(progress => {
+        const resource = resources.find(item => item.recurso_id === progress.resourceId);
+        return /certifica/i.test(resourceTypes.get(resource?.tipo_recurso_id) || "");
+      }).length,
+      generalPercentage: this.getGeneralScore().percentage,
+      trailPercentage: trailAnalysis ? trailAnalysis.score.percentage : null,
+      trailName: selectedTrail?.nome || ""
+    };
+  }
+
   getEvolutionTimeline(year = new Date().getFullYear()) {
     this.prepareUserData();
     const data = userDataService.getCurrentUserData();

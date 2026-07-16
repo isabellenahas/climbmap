@@ -1,3 +1,3 @@
-# Climb Map — Sprint 2.7
+# Climb Map — Sprint 2.7.1
 
-Atualização de autoavaliação e planejamento por competência, status independentes de recursos, filtros do Kanban e timeline anual da página Evolução.
+Patch de estabilidade para Trilhas e composição da página Evolução com indicadores e calendário anual.

@@ -5,8 +5,8 @@ import { ui, escapeHtml, escapeAttribute } from "../components/ui.js";
 import { exportTechnicalBackup, importTechnicalBackup } from "../services/backup-service.js";
 import { configService } from "../services/config-service.js";
 import { dataService } from "../services/data-service.js";
-import { userDataService } from "../services/user-data-service.js?v=2.7.0";
-import { businessEngine } from "../business/business-engine.js?v=2.7.0";
+import { userDataService } from "../services/user-data-service.js?v=2.7.1";
+import { businessEngine } from "../business/business-engine.js?v=2.7.1";
 
 export function renderRoute(route, container) {
   const renderers = { mapa: renderMap, catalogo: renderCatalog, trilhas: renderTrails, planejamento: renderPlanning, evolucao: renderEvolution, perfil: renderProfile, administracao: renderAdministration };
@@ -185,43 +185,102 @@ function bindTrailActions(container) { container.querySelectorAll(".trail-detail
 function openTrailDetails(trailId) {
   const analysis = businessEngine.getTrailAnalysis(trailId);
   if (!analysis) return;
+
+  const trail = dataService.getById("trilhas", trailId);
+  if (!trail) return;
+
   const selected = userDataService.getSelectedTrailId() === trailId;
-  const kind = trailKind(analysis.trail);
+  const kind = trailKind(trail);
   document.querySelector("#trail-dialog")?.remove();
+
   const dialog = document.createElement("dialog");
   dialog.id = "trail-dialog";
   dialog.className = "competency-dialog";
   dialog.innerHTML = `
     <article class="competency-dialog-card stack">
-      <header class="competency-dialog-header"><div><p class="eyebrow">${kind === "pessoa" ? "TRILHA PARA PESSOA" : "TRILHA DE CARREIRA"}</p><h2>${escapeHtml(analysis.trail.nome)}</h2><p class="muted">${escapeHtml(analysis.trail.descricao || "")}</p></div><button class="icon-button" data-close-dialog>×</button></header>
-      <section class="trail-dialog-summary"><div><span class="muted">Progresso nos requisitos</span><strong class="metric-value compact-value">${analysis.score.percentage}%</strong>${ui.progress(analysis.score.percentage, `${analysis.trail.nome}: ${analysis.score.percentage}%`)}</div><div class="trail-summary-numbers"><span><strong>${analysis.completed}</strong> atendidos</span><span><strong>${analysis.total}</strong> requisitos</span></div></section>
-      <div class="quick-actions"><button id="trail-dialog-select" class="button ${selected ? "button-secondary" : "button-primary"}">${selected ? "Deixar de acompanhar" : "Acompanhar esta trilha"}</button></div>
-      <p id="trail-dialog-message" class="form-message"></p>
+      <header class="competency-dialog-header">
+        <div>
+          <p class="eyebrow">${kind === "pessoa" ? "TRILHA PARA PESSOA" : "TRILHA DE CARREIRA"}</p>
+          <h2>${escapeHtml(trail.nome)}</h2>
+          <p class="muted">${escapeHtml(trail.descricao || "")}</p>
+        </div>
+        <button class="icon-button" data-close-dialog aria-label="Fechar">×</button>
+      </header>
+
+      <section class="trail-dialog-summary">
+        <div>
+          <span class="muted">Aderência atual</span>
+          <strong class="metric-value compact-value">${safeNumber(analysis.score?.percentage)}%</strong>
+          ${ui.progress(safeNumber(analysis.score?.percentage), `${trail.nome}: ${safeNumber(analysis.score?.percentage)}%`)}
+        </div>
+        <div class="trail-summary-numbers">
+          <span><strong>${safeNumber(analysis.completed)}</strong> atendidos</span>
+          <span><strong>${safeNumber(analysis.total)}</strong> requisitos</span>
+        </div>
+      </section>
+
+      <div class="quick-actions">
+        <button id="trail-dialog-select" class="button ${selected ? "button-secondary" : "button-primary"}">
+          ${selected ? "Deixar de acompanhar" : "Acompanhar esta trilha"}
+        </button>
+      </div>
+      <p id="trail-dialog-message" class="form-message" aria-live="polite"></p>
+
       <section class="stack">
-        ${analysis.requirements.map(item => {
-          const target = item.nextRequiredLevel;
-          const planning = target ? userDataService.getLevelProgress(target.nivel_id) : null;
-          const buttonLabel = item.satisfied ? "Requisito atendido" : planning?.status ? `No planejamento: ${planningStatusLabel(planning.status)}` : `Planejar ${target?.nome || item.minimumLevel.nome}`;
-          return `<article class="trail-competency-row"><div><strong>${escapeHtml(item.competency.nome)}</strong><p class="muted">Nível mínimo: ${escapeHtml(item.minimumLevel.nome)}</p></div><div>${item.score.percentage}%${ui.progress(item.score.percentage, item.competency.nome)}</div><div class="trail-card-actions"><button class="button button-secondary trail-open-competency" data-competency-id="${item.competency.competencia_id}">Detalhes</button><button class="button button-secondary trail-plan-level" data-level-id="${escapeAttribute(target?.nivel_id || "")}" ${item.satisfied || planning?.status ? "disabled" : ""}>${escapeHtml(buttonLabel)}</button></div></article>`;
-        }).join("")}
+        ${(analysis.items || []).map(item => {
+          const minimumLevel = item.nivel_minimo_id ? dataService.getById("niveis", item.nivel_minimo_id) : null;
+          const progress = userDataService.getCompetencyProgress(item.competency.competencia_id);
+          const isPlanned = progress?.status && progress.status !== "cancelado";
+          const planningLabel = item.met
+            ? "Requisito atendido"
+            : isPlanned
+              ? `No planejamento: ${competencyStatusLabel(progress.status)}`
+              : "Adicionar ao planejamento";
+
+          return `<article class="trail-competency-row">
+            <div>
+              <strong>${escapeHtml(item.competency.nome)}</strong>
+              <p class="muted">${minimumLevel ? `Nível de referência: ${escapeHtml(minimumLevel.nome)}` : "Sem nível de referência"}</p>
+            </div>
+            <div>
+              ${safeNumber(item.score?.percentage)}%
+              ${ui.progress(safeNumber(item.score?.percentage), item.competency.nome)}
+            </div>
+            <div class="trail-card-actions">
+              <button class="button button-secondary trail-open-competency" data-competency-id="${escapeAttribute(item.competency.competencia_id)}">Detalhes</button>
+              <button class="button button-secondary trail-plan-competency" data-competency-id="${escapeAttribute(item.competency.competencia_id)}" ${item.met || isPlanned ? "disabled" : ""}>${escapeHtml(planningLabel)}</button>
+            </div>
+          </article>`;
+        }).join("") || '<div class="empty-state compact">Esta trilha ainda não possui competências relacionadas.</div>'}
       </section>
     </article>`;
+
   document.body.appendChild(dialog);
   const message = dialog.querySelector("#trail-dialog-message");
+
   dialog.querySelector("#trail-dialog-select")?.addEventListener("click", event => {
     const next = userDataService.getSelectedTrailId() === trailId ? "" : trailId;
     userDataService.setSelectedTrail(next);
     event.currentTarget.textContent = next ? "Deixar de acompanhar" : "Acompanhar esta trilha";
+    event.currentTarget.className = `button ${next ? "button-secondary" : "button-primary"}`;
     message.textContent = next ? "Trilha acompanhada." : "Acompanhamento removido.";
   });
-  dialog.querySelectorAll(".trail-plan-level:not([disabled])").forEach(button => button.addEventListener("click", () => {
-    userDataService.setCompetencyStatus(button.dataset.competencyId, "em_aberto");
-    button.textContent = "Adicionado ao planejamento";
-    button.disabled = true;
-    message.textContent = "Competência adicionada ao planejamento em Em aberto.";
-  }));
-  dialog.querySelectorAll(".trail-open-competency").forEach(button => button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId)));
-  dialog.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
+
+  dialog.querySelectorAll(".trail-plan-competency:not([disabled])").forEach(button => {
+    button.addEventListener("click", () => {
+      userDataService.setCompetencyStatus(button.dataset.competencyId, "em_aberto");
+      button.textContent = "Adicionado ao planejamento";
+      button.disabled = true;
+      message.textContent = "Competência adicionada ao planejamento em Em aberto.";
+    });
+  });
+
+  dialog.querySelectorAll(".trail-open-competency").forEach(button => {
+    button.addEventListener("click", () => openCompetencyDetails(button.dataset.competencyId));
+  });
+
+  dialog.querySelectorAll("[data-close-dialog]").forEach(button => button.addEventListener("click", () => dialog.close()));
+  dialog.addEventListener("click", event => { if (event.target === dialog) dialog.close(); });
   dialog.addEventListener("close", () => dialog.remove());
   dialog.showModal();
 }
@@ -249,9 +308,48 @@ function applyPlanningFilters(container){const date=container.querySelector("#pl
 function getCompetencyPlanningItems(){const user=userDataService.getCurrentUserData();const resources=dataService.getAll("recursos",{activeOnly:true});const levels=dataService.getAll("niveis",{activeOnly:true});return user.competencyProgress.filter(item=>item.status&&item.status!=="cancelado").map(progress=>{const competency=dataService.getById("competencias",progress.competencyId);const domain=competency?dataService.getById("dominios",competency.dominio_id):null;const category=domain?dataService.getById("categorias",domain.categoria_id):null;if(!competency)return null;const resourceItems=user.resourceProgress.filter(r=>r.competencyId===progress.competencyId&&r.status).map(r=>{const resource=resources.find(x=>x.recurso_id===r.resourceId);return resource?{...r,nome:resource.nome}:null}).filter(Boolean);return{id:competency.competencia_id,title:competency.nome,subtitle:`${category?.nome||""} · ${domain?.nome||""}`,categoryId:category?.categoria_id||"",status:progress.status,priority:progress.priority,targetDate:progress.targetDate,assessmentLabel:businessEngine.getCompetencyScore(competency.competencia_id).assessmentLabel,resources:resourceItems};}).filter(Boolean);}
 
 function renderEvolution() {
-  const year = new Date().getFullYear(); const timeline = businessEngine.getEvolutionTimeline(year); const months=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-  const row=(items,tone)=>`<div class="timeline-row timeline-${tone}"><div class="timeline-label">${tone==="done"?"Realizado":"Planejado"}</div><div class="timeline-months">${months.map((month,index)=>{const monthItems=items.filter(item=>new Date(`${item.date}T12:00:00`).getMonth()===index);return `<div class="timeline-month"><span>${month}</span><div class="timeline-markers">${monthItems.map(item=>`<button class="timeline-marker" title="${escapeAttribute(timelineTooltip(item))}"><span>${escapeHtml(item.title)}</span></button>`).join("")}</div></div>`;}).join("")}</div></div>`;
-  return `<section class="evolution-header"><p class="eyebrow">EVOLUÇÃO</p><h2>Linha do tempo ${year}</h2><p class="muted">Concluído em linha escura e planejado em linha clara.</p></section>${ui.card(`<div class="dual-timeline">${row(timeline.completed,"done")}${row(timeline.planned,"planned")}</div>`,"evolution-card")}`;
+  const year = new Date().getFullYear();
+  const timeline = businessEngine.getEvolutionTimeline(year);
+  const summary = businessEngine.getEvolutionSummary();
+  const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const row = (items, tone) => `<div class="timeline-row timeline-${tone}">
+    <div class="timeline-label">${tone === "done" ? "Realizado" : "Planejado"}</div>
+    <div class="timeline-months">${months.map((month, index) => {
+      const monthItems = items.filter(item => new Date(`${item.date}T12:00:00`).getMonth() === index);
+      return `<div class="timeline-month"><span>${month}</span><div class="timeline-markers">${monthItems.map(item => `<button class="timeline-marker" title="${escapeAttribute(timelineTooltip(item))}"><span>${escapeHtml(item.title)}</span></button>`).join("")}</div></div>`;
+    }).join("")}</div>
+  </div>`;
+
+  return `
+    <section class="evolution-profile-header">
+      <div>
+        <p class="eyebrow">EVOLUÇÃO PROFISSIONAL</p>
+        <h2>${escapeHtml(currentUser()?.name || "Profissional")}</h2>
+        <p class="muted">Evidências do desenvolvimento registrado no Climb Map.</p>
+      </div>
+    </section>
+
+    <section class="evolution-metric-grid">
+      ${dashboardMetric("Competências concluídas", String(summary.completedCompetencies), "Competências finalizadas no planejamento", "green", true)}
+      ${dashboardMetric("Em desenvolvimento", String(summary.developingCompetencies), "Competências em andamento", "blue", true)}
+      ${dashboardMetric("Competências planejadas", String(summary.plannedCompetencies), "Stand by e em aberto", "orange", true)}
+      ${dashboardMetric("Recursos concluídos", String(summary.completedResources), "Cursos e materiais finalizados", "purple", true)}
+      ${dashboardMetric("Certificações", String(summary.completedCertifications), "Certificações concluídas", "teal", true)}
+      ${dashboardMetric("Nível geral", `${summary.generalPercentage}%`, "Autoavaliação consolidada", "indigo", true)}
+      ${dashboardMetric("Aderência à trilha", summary.trailPercentage === null ? "Sem trilha" : `${summary.trailPercentage}%`, summary.trailName || "Escolha uma trilha para acompanhar", "purple", true)}
+    </section>
+
+    ${ui.card(`
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">CALENDÁRIO DE EVOLUÇÃO</p>
+          <h3>Linha do tempo ${year}</h3>
+          <p class="muted">A linha escura representa o realizado; a linha clara mostra o que possui data planejada.</p>
+        </div>
+      </div>
+      <div class="dual-timeline">${row(timeline.completed, "done")}${row(timeline.planned, "planned")}</div>
+    `, "evolution-card")}
+  `;
 }
 function timelineTooltip(item){const resources=item.resources||[];return `${item.title} · ${formatDate(item.date)}${resources.length?` · Recursos: ${resources.map(r=>r.resource.nome).join(", ")}`:""}`;}
 

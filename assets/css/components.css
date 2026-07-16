@@ -579,3 +579,12 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
 .timeline-done .timeline-marker { background:#1f2937; color:#fff; }
 .timeline-planned .timeline-marker { background:#e2e8f0; color:#334155; }
 @media(max-width:760px){.competency-overview-panel,.competency-planning-panel{align-items:stretch;flex-direction:column}.planning-filters{grid-template-columns:1fr}}
+
+/* Sprint 2.7.1 — estabilidade de Trilhas e indicadores de Evolução */
+.evolution-profile-header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:var(--space-5); }
+.evolution-metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--space-4); margin-bottom:var(--space-5); }
+.evolution-metric-grid .dashboard-metric { min-height:132px; }
+.trail-competency-row { align-items:center; }
+.trail-competency-row > div:nth-child(2) { min-width:170px; }
+@media (max-width:1100px) { .evolution-metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:700px) { .evolution-metric-grid { grid-template-columns:1fr; } .trail-competency-row { grid-template-columns:1fr; } .trail-competency-row > div:nth-child(2) { min-width:0; } }
