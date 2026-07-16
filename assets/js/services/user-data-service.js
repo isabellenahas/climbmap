@@ -2,8 +2,10 @@ import { currentUser } from "../core/auth.js";
 import { loadState, saveState } from "../core/storage.js";
 
 /**
- * Dados pessoais do usuário. A unidade de planejamento e avaliação é o NÍVEL.
- * Dados administrativos continuam vindo dos CSVs; dados pessoais ficam no navegador.
+ * Dados individuais do Climb Map.
+ * - Autoavaliação e planejamento pertencem à COMPETÊNCIA.
+ * - Recursos possuem acompanhamento independente.
+ * - Toda alteração relevante gera histórico para a página Evolução.
  */
 class UserDataService {
   getCurrentUserData() {
@@ -15,104 +17,77 @@ class UserDataService {
     return structuredClone(state.userData[user.id]);
   }
 
-  /** Migra testes antigos feitos por competência para o primeiro nível da competência. */
-  migrateLegacyData(levels = []) {
+  /** Converte automaticamente registros antigos por nível para registros por competência. */
+  migrateToCompetencyModel(levels = []) {
     const user = currentUser();
     if (!user) return;
     const state = loadState();
     const data = normalizeUserData(state.userData[user.id] ?? createEmptyUserData());
-    if (data.levelModelMigrated) return;
+    if (data.competencyModelMigrated) return;
 
-    const firstLevelByCompetency = new Map();
-    [...levels].sort(byOrder).forEach(level => {
-      if (!firstLevelByCompetency.has(level.competencia_id)) {
-        firstLevelByCompetency.set(level.competencia_id, level.nivel_id);
-      }
-    });
+    const competencyByLevel = new Map(levels.map(level => [level.nivel_id, level.competencia_id]));
+    for (const old of data.levelProgress) {
+      const competencyId = competencyByLevel.get(old.levelId);
+      if (!competencyId) continue;
+      const target = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
+      if (!target.assessmentId && old.assessmentId) target.assessmentId = old.assessmentId;
+      const mappedStatus = mapLegacyStatus(old.status);
+      if (!target.status && mappedStatus) target.status = mappedStatus;
+      target.priority = Math.max(Number(target.priority || 0), Number(old.priority || 0));
+      target.targetDate = target.targetDate || old.targetDate || "";
+      target.notes = target.notes || old.notes || "";
+      target.startedAt = target.startedAt || old.startedAt || "";
+      target.completedAt = target.completedAt || old.completedAt || "";
+    }
 
-    data.competencyProgress.forEach(old => {
-      const levelId = firstLevelByCompetency.get(old.competencyId);
-      if (!levelId || !old.assessmentId) return;
-      const target = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
-      if (!target.assessmentId) target.assessmentId = old.assessmentId;
-    });
-
-    data.planItems.forEach(old => {
-      const levelId = firstLevelByCompetency.get(old.competencyId);
-      if (!levelId) return;
-      const target = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
-      if (!target.status) target.status = old.status || "interesse";
-      target.priority = old.priority ?? target.priority;
-      target.targetDate = old.targetDate || target.targetDate;
-      target.notes = old.notes || target.notes;
-    });
-
-    data.levelModelMigrated = true;
-    data.levelModelMigratedAt = new Date().toISOString();
+    data.competencyModelMigrated = true;
+    data.competencyModelMigratedAt = new Date().toISOString();
     state.userData[user.id] = data;
     saveState(state);
   }
 
-  getLevelProgress(levelId) {
-    return this.getCurrentUserData().levelProgress.find(item => item.levelId === levelId) ?? null;
+  getCompetencyProgress(competencyId) {
+    return this.getCurrentUserData().competencyProgress.find(item => item.competencyId === competencyId) ?? null;
   }
 
-  setLevelAssessment(levelId, assessmentId) {
+  setCompetencyAssessment(competencyId, assessmentId) {
     return this.updateUserData(data => {
-      const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
-      const previous = item.assessmentId || "";
-      if (previous === assessmentId) return;
+      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
+      const previous = item.assessmentId;
       item.assessmentId = assessmentId;
-      item.updatedAt = new Date().toISOString();
-      appendHistory(data, { type: "autoavaliacao_alterada", entityType: "nivel", entityId: levelId, previousValue: previous, newValue: assessmentId });
+      item.updatedAt = nowIso();
+      if (previous !== assessmentId) addHistory(data, "autoavaliacao_alterada", "competencia", competencyId, previous, assessmentId);
     });
   }
 
-  setLevelPlanningStatus(levelId, status) {
+  setCompetencyStatus(competencyId, status, options = {}) {
     return this.updateUserData(data => {
-      const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
-      const now = new Date().toISOString();
-      const previous = item.status || "";
-      if (previous === status) return;
+      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
+      const previous = item.status;
+      const now = nowIso();
       item.status = status;
-      if (status === "estudando" && !item.startedAt) item.startedAt = now;
-      item.completedAt = status === "concluido" ? now : "";
+      if (status === "em_andamento" && !item.startedAt) item.startedAt = now;
+      if (status === "concluido") item.completedAt = options.completedAt || item.completedAt || today();
+      if (status !== "concluido" && previous === "concluido") item.completedAt = "";
+      if (status === "cancelado") item.cancelledAt = now;
       item.updatedAt = now;
-      const type = status === "concluido" ? "nivel_concluido" : status === "estudando" ? "nivel_iniciado" : "nivel_planejado";
-      appendHistory(data, { type, entityType: "nivel", entityId: levelId, previousValue: previous, newValue: status });
+      if (previous !== status) addHistory(data, status === "concluido" ? "competencia_concluida" : "competencia_status_alterado", "competencia", competencyId, previous, status, item.completedAt || "");
     });
   }
 
-  /** Atualiza metadados do planejamento sem alterar a nota do nível. */
-  setLevelPlanningDetails(levelId, details = {}) {
+  setCompetencyPlanningDetails(competencyId, details = {}) {
     return this.updateUserData(data => {
-      const item = upsert(data.levelProgress, "levelId", levelId, emptyLevelProgress(levelId));
+      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
       if (Object.hasOwn(details, "priority")) item.priority = Number(details.priority) || 0;
       if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
       if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
-      const previousEvidence = item.evidenceUrl || "";
-      item.updatedAt = new Date().toISOString();
-      if (!previousEvidence && item.evidenceUrl) appendHistory(data, { type: "evidencia_adicionada", entityType: "recurso", entityId: resourceId, newValue: item.evidenceUrl });
-    });
-  }
-
-  removeLevelFromPlanning(levelId) {
-    return this.updateUserData(data => {
-      const item = data.levelProgress.find(entry => entry.levelId === levelId);
-      if (item) {
-        item.status = "";
-        item.priority = 0;
-        item.targetDate = "";
-        item.notes = "";
-        item.startedAt = "";
-        item.completedAt = "";
-        item.updatedAt = new Date().toISOString();
-      }
+      item.updatedAt = nowIso();
+      if (item.targetDate) addHistory(data, "competencia_planejada", "competencia", competencyId, "", item.targetDate, item.targetDate);
     });
   }
 
   getPlanningItems() {
-    return this.getCurrentUserData().levelProgress.filter(item => item.status);
+    return this.getCurrentUserData().competencyProgress.filter(item => item.status && item.status !== "cancelado");
   }
 
   toggleFavorite(competencyId) {
@@ -123,63 +98,54 @@ class UserDataService {
     });
   }
 
-  isFavorite(competencyId) {
-    return this.getCurrentUserData().favorites.includes(competencyId);
-  }
-
-  setSelectedTrail(trailId) {
-    return this.updateUserData(data => {
-      data.selectedTrailId = trailId || "";
-      data.selectedTrailUpdatedAt = new Date().toISOString();
-    });
-  }
-
-  getSelectedTrailId() {
-    return this.getCurrentUserData().selectedTrailId;
-  }
-
-  setResourceStatus(resourceId, status) {
-    return this.updateUserData(data => {
-      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
-      const now = new Date().toISOString();
-      const previous = item.status || "";
-      if (previous === status) return;
-      item.status = status;
-      if (status === "estudando" && !item.startedAt) item.startedAt = now;
-      item.completedAt = status === "concluido" ? now : "";
-      item.updatedAt = now;
-      const type = status === "concluido" ? "recurso_concluido" : status === "estudando" ? "recurso_iniciado" : "recurso_planejado";
-      appendHistory(data, { type, entityType: "recurso", entityId: resourceId, previousValue: previous, newValue: status });
-    });
-  }
-
-  /** Registra evidência, validade e observações pessoais do recurso. */
-  setResourceDetails(resourceId, details = {}) {
-    return this.updateUserData(data => {
-      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
-      const previousEvidence = item.evidenceUrl || "";
-      if (Object.hasOwn(details, "expiresAt")) item.expiresAt = String(details.expiresAt || "");
-      if (Object.hasOwn(details, "evidenceUrl")) item.evidenceUrl = String(details.evidenceUrl || "").trim();
-      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
-      item.updatedAt = new Date().toISOString();
-      if (!previousEvidence && item.evidenceUrl) appendHistory(data, { type: "evidencia_adicionada", entityType: "recurso", entityId: resourceId, newValue: item.evidenceUrl });
-    });
-  }
+  isFavorite(competencyId) { return this.getCurrentUserData().favorites.includes(competencyId); }
+  setSelectedTrail(trailId) { return this.updateUserData(data => { data.selectedTrailId = trailId || ""; data.selectedTrailUpdatedAt = nowIso(); }); }
+  getSelectedTrailId() { return this.getCurrentUserData().selectedTrailId; }
 
   getResourceProgress(resourceId) {
     return this.getCurrentUserData().resourceProgress.find(item => item.resourceId === resourceId) ?? null;
   }
 
-  getHistory() {
-    return this.getCurrentUserData().history
-      .slice()
-      .sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || "")));
+  /**
+   * Atualiza o recurso e sincroniza a competência associada.
+   * O sistema pode avançar o status da competência, mas nunca retrocede automaticamente.
+   */
+  setResourceStatus(resourceId, status, competencyId = "") {
+    return this.updateUserData(data => {
+      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
+      const previous = item.status;
+      const now = nowIso();
+      item.status = status;
+      item.competencyId = competencyId || item.competencyId;
+      if (status === "em_andamento" && !item.startedAt) item.startedAt = today();
+      if (status === "concluido") item.completedAt = item.completedAt || today();
+      if (status !== "concluido" && previous === "concluido") item.completedAt = "";
+      if (status === "cancelado") item.cancelledAt = now;
+      item.updatedAt = now;
+      if (previous !== status) addHistory(data, status === "concluido" ? "recurso_concluido" : "recurso_status_alterado", "recurso", resourceId, previous, status, item.completedAt || item.targetDate || "");
+      if (item.competencyId) syncCompetencyFromResources(data, item.competencyId);
+    });
   }
 
-  addHistoryEvent(event = {}) {
+  setResourceDetails(resourceId, details = {}, competencyId = "") {
     return this.updateUserData(data => {
-      appendHistory(data, event);
+      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
+      item.competencyId = competencyId || item.competencyId;
+      if (Object.hasOwn(details, "startedAt")) item.startedAt = String(details.startedAt || "");
+      if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
+      if (Object.hasOwn(details, "completedAt")) item.completedAt = String(details.completedAt || "");
+      if (Object.hasOwn(details, "expiresAt")) item.expiresAt = String(details.expiresAt || "");
+      if (Object.hasOwn(details, "evidenceUrl")) item.evidenceUrl = String(details.evidenceUrl || "").trim();
+      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
+      item.updatedAt = nowIso();
+      if (item.targetDate) addHistory(data, "recurso_planejado", "recurso", resourceId, "", item.targetDate, item.targetDate);
+      if (item.competencyId) syncCompetencyFromResources(data, item.competencyId);
     });
+  }
+
+  getHistory(year = null) {
+    const events = this.getCurrentUserData().history;
+    return year ? events.filter(item => new Date(item.date).getFullYear() === Number(year)) : events;
   }
 
   updateUserData(mutator) {
@@ -193,73 +159,53 @@ class UserDataService {
   }
 }
 
-function emptyLevelProgress(levelId) {
-  return {
-    levelId,
-    assessmentId: "",
-    status: "",
-    priority: 0,
-    targetDate: "",
-    notes: "",
-    startedAt: "",
-    completedAt: "",
-    updatedAt: null
-  };
+function syncCompetencyFromResources(data, competencyId) {
+  const resources = data.resourceProgress.filter(item => item.competencyId === competencyId && item.status && item.status !== "cancelado");
+  if (!resources.length) return;
+  const competency = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
+  const rank = { stand_by: 0, em_aberto: 1, em_andamento: 2, concluido: 3 };
+  const previous = competency.status;
+  let proposed = "";
+  if (resources.some(item => item.status === "em_andamento")) proposed = "em_andamento";
+  else if (resources.some(item => item.status === "em_aberto")) proposed = "em_aberto";
+  else if (resources.every(item => item.status === "concluido")) proposed = "concluido";
+  if (!proposed) return;
+  if (proposed === "concluido" || !previous || previous === "cancelado" || (rank[proposed] ?? 0) > (rank[previous] ?? 0)) {
+    competency.status = proposed;
+    if (proposed === "em_andamento" && !competency.startedAt) competency.startedAt = today();
+    if (proposed === "concluido") competency.completedAt = competency.completedAt || today();
+    competency.updatedAt = nowIso();
+    if (previous !== proposed) addHistory(data, proposed === "concluido" ? "competencia_concluida" : "competencia_status_alterado", "competencia", competencyId, previous, proposed, competency.completedAt || "");
+  }
 }
 
+function emptyCompetencyProgress(competencyId) {
+  return { competencyId, assessmentId: "", status: "", priority: 0, targetDate: "", notes: "", addedAt: nowIso(), startedAt: "", completedAt: "", cancelledAt: "", updatedAt: null };
+}
 function emptyResourceProgress(resourceId) {
-  return {
-    resourceId,
-    status: "",
-    startedAt: "",
-    completedAt: "",
-    expiresAt: "",
-    evidenceUrl: "",
-    notes: "",
-    updatedAt: null
-  };
+  return { resourceId, competencyId: "", status: "", startedAt: "", targetDate: "", completedAt: "", expiresAt: "", evidenceUrl: "", notes: "", cancelledAt: "", updatedAt: null };
 }
-
-function upsert(collection, key, value, initialValue) {
-  let item = collection.find(entry => entry[key] === value);
-  if (!item) { item = structuredClone(initialValue); collection.push(item); }
-  return item;
+function addHistory(data, type, entityType, entityId, previousValue = "", newValue = "", effectiveDate = "") {
+  data.history.push({ id: `EVT-${Date.now()}-${Math.random().toString(16).slice(2)}`, date: effectiveDate || nowIso(), type, entityType, entityId, previousValue, newValue, createdAt: nowIso() });
 }
-
+function upsert(collection, key, value, initialValue) { let item = collection.find(entry => entry[key] === value); if (!item) { item = structuredClone(initialValue); collection.push(item); } return item; }
 function normalizeUserData(data) {
   return {
-    competencyProgress: Array.isArray(data.competencyProgress) ? data.competencyProgress : [],
-    resourceProgress: Array.isArray(data.resourceProgress)
-      ? data.resourceProgress.map(item => ({ ...emptyResourceProgress(item.resourceId), ...item }))
-      : [],
+    competencyProgress: Array.isArray(data.competencyProgress) ? data.competencyProgress.map(item => ({ ...emptyCompetencyProgress(item.competencyId), ...item, status: mapLegacyStatus(item.status) })) : [],
+    resourceProgress: Array.isArray(data.resourceProgress) ? data.resourceProgress.map(item => ({ ...emptyResourceProgress(item.resourceId), ...item, status: mapLegacyStatus(item.status) })) : [],
+    levelProgress: Array.isArray(data.levelProgress) ? data.levelProgress : [],
     plans: Array.isArray(data.plans) ? data.plans : [],
     planItems: Array.isArray(data.planItems) ? data.planItems : [],
-    levelProgress: Array.isArray(data.levelProgress)
-      ? data.levelProgress.map(item => ({ ...emptyLevelProgress(item.levelId), ...item }))
-      : [],
     favorites: Array.isArray(data.favorites) ? data.favorites : [],
+    history: Array.isArray(data.history) ? data.history : [],
     selectedTrailId: typeof data.selectedTrailId === "string" ? data.selectedTrailId : "",
     selectedTrailUpdatedAt: data.selectedTrailUpdatedAt ?? null,
-    history: Array.isArray(data.history) ? data.history : [],
-    levelModelMigrated: Boolean(data.levelModelMigrated),
-    levelModelMigratedAt: data.levelModelMigratedAt ?? null
+    competencyModelMigrated: Boolean(data.competencyModelMigrated),
+    competencyModelMigratedAt: data.competencyModelMigratedAt ?? null
   };
 }
-
-function appendHistory(data, event) {
-  data.history = Array.isArray(data.history) ? data.history : [];
-  data.history.push({
-    eventId: `EVT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    occurredAt: new Date().toISOString(),
-    type: String(event.type || "alteracao"),
-    entityType: String(event.entityType || ""),
-    entityId: String(event.entityId || ""),
-    previousValue: event.previousValue ?? "",
-    newValue: event.newValue ?? "",
-    description: String(event.description || "")
-  });
-}
-
+function mapLegacyStatus(status) { return ({ interesse: "em_aberto", vou_estudar: "em_aberto", estudando: "em_andamento", concluido: "concluido", pausado: "stand_by", stand_by: "stand_by", em_aberto: "em_aberto", em_andamento: "em_andamento", cancelado: "cancelado" })[status] || status || ""; }
 function createEmptyUserData() { return normalizeUserData({}); }
-function byOrder(a, b) { return Number(a.ordem || 0) - Number(b.ordem || 0); }
+function nowIso() { return new Date().toISOString(); }
+function today() { return new Date().toISOString().slice(0, 10); }
 export const userDataService = new UserDataService();

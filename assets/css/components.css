@@ -544,45 +544,38 @@ th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border)
 @media(max-width:1050px){.dashboard-hero-grid,.dashboard-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.resource-card-clean{grid-template-columns:1fr}.resource-card-clean .resource-actions{justify-content:flex-start}.competency-overview-grid{grid-template-columns:1fr}}
 @media(max-width:650px){.dashboard-hero-grid,.dashboard-mini-grid{grid-template-columns:1fr}.catalog-competency-main,.level-card-header{align-items:stretch;flex-direction:column}.level-controls-clean{grid-template-columns:1fr}.in-progress-course-card{grid-template-columns:auto 1fr}.in-progress-course-card .button{grid-column:1/-1}}
 
-/* Sprint 2.6 — operação, histórico e refinamentos visuais. */
-.map-summary-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--space-4); }
-.map-summary-card { position:relative; display:grid; gap:.4rem; min-height:118px; padding:1.15rem; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
-.map-summary-card::before { content:""; position:absolute; inset:0 0 auto 0; height:5px; background:var(--metric-accent,#355ce2); }
-.map-summary-card span,.map-summary-card small { color:var(--muted); }.map-summary-card strong { font-size:1.85rem; line-height:1.1; }
-.map-section { margin-top:var(--space-5); }.map-section-heading { align-items:flex-start; }
-.development-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:1rem; margin-top:1rem; }
-.development-card { display:grid; gap:.75rem; padding:1rem; border:1px solid rgb(53 92 226 / 20%); border-radius:16px; background:linear-gradient(145deg,#f4f7ff,var(--surface)); }
-.development-card-top,.development-meta { display:flex; align-items:center; justify-content:space-between; gap:.75rem; color:var(--muted); font-size:.82rem; }
-.development-category { color:var(--primary); font-weight:800; text-transform:uppercase; letter-spacing:.06em; }.development-card h4{margin:0}.development-card p{margin:0}.development-next{font-size:.88rem;line-height:1.45}
-.active-resource-list { display:grid; gap:.8rem; margin-top:1rem; }.active-resource-card { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:1rem; padding:1rem; border:1px solid rgb(16 164 111 / 24%); border-radius:14px; background:linear-gradient(90deg,rgb(16 164 111 / 9%),var(--surface) 42%); }
-.active-resource-card h4{margin:.2rem 0}.active-resource-card p{margin:0}.active-resource-meta{display:grid;gap:.25rem;color:#087a53;font-weight:700}.active-resource-meta small{color:var(--muted);font-weight:500}
-.next-action-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.75rem; margin-top:1rem; }.next-action-item { display:grid; gap:.25rem; text-align:left; padding:1rem; border:1px solid var(--border); border-radius:14px; background:var(--surface-2); color:var(--text); cursor:pointer; }.next-action-item:hover{border-color:var(--primary);transform:translateY(-1px)}.next-action-item span,.next-action-item small{color:var(--muted)}
-.operational-heatmap .heatmap-tile { min-height:98px; transition:transform .16s ease,box-shadow .16s ease; }.operational-heatmap .heatmap-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-
-/* Competência e recursos são blocos visualmente distintos. */
-.competency-dialog-clean { background:#f5f7fb; }
-.competency-dialog-header,.competency-overview-grid,.competency-level-section { border-radius:16px; }
-.competency-dialog-header { padding:1.1rem; background:#eef2f8; border:1px solid #dfe5ef; }
-.competency-level-section { padding:1rem; background:#eef2f8; border:1px solid #dfe5ef; }
-.level-card-clean { position:relative; background:#fff; border:1px solid #d9e1ec; box-shadow:0 5px 16px rgb(24 39 75 / 5%); opacity:1 !important; }
-.level-card-clean::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; border-radius:16px 0 0 16px; background:#355ce2; }
-.level-card-clean:first-child { opacity:1 !important; filter:none !important; }
-.resource-list-clean { display:grid; gap:.65rem; margin-top:1rem; padding:.8rem; border-radius:12px; background:#f3f6fa; border:1px solid #e0e6ef; }
-.resource-card-clean { background:#fff; border:1px solid #dfe5ee; box-shadow:none; }
-.resource-card-clean + .resource-card-clean { margin-top:0; }
-
-/* Trilhas para pessoa são filtradas por usuario_destino; carreira permanece pública. */
-.trail-group-person .trail-group-heading { padding:.9rem 1rem; border-radius:12px; background:rgb(124 77 255 / 8%); }
-.trail-group-career .trail-group-heading { padding:.9rem 1rem; border-radius:12px; background:rgb(16 164 111 / 8%); }
-
-/* Planejamento: azul para nível de competência e verde para recurso. */
-.resource-dot{background:#10a46f}.planning-card-resource{border-left-color:#10a46f;background:linear-gradient(90deg,rgb(16 164 111 / 10%),var(--surface) 38%)}
-
-.evolution-profile-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.4rem; border:1px solid var(--border); border-radius:var(--radius-md); background:linear-gradient(135deg,rgb(53 92 226 / 9%),rgb(124 77 255 / 7%)); }
-.evolution-profile-header h2{margin:.15rem 0 .35rem}.evolution-metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4);margin-top:var(--space-5)}.evolution-section{margin-top:var(--space-5)}
-.evolution-timeline{display:grid;gap:.75rem;margin-top:1rem}.timeline-event{display:grid;grid-template-columns:150px minmax(0,1fr);gap:1rem;padding:.85rem 0;border-bottom:1px solid var(--border)}.timeline-event:last-child{border-bottom:0}.timeline-event time{color:var(--muted);font-size:.82rem}.timeline-event p{margin:.2rem 0 0}
-
-@media(max-width:1100px){.map-summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.active-resource-card{grid-template-columns:1fr auto}.active-resource-card .button{grid-column:1/-1}.evolution-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.map-summary-strip,.evolution-metric-grid{grid-template-columns:1fr}.active-resource-card{grid-template-columns:1fr}.evolution-profile-header{flex-direction:column}.timeline-event{grid-template-columns:1fr;gap:.2rem}}
-[data-theme="dark"] .competency-dialog-clean,[data-theme="dark"] .competency-dialog-header,[data-theme="dark"] .competency-level-section,[data-theme="dark"] .resource-list-clean{background:var(--surface-2)}
-[data-theme="dark"] .level-card-clean,[data-theme="dark"] .resource-card-clean{background:var(--surface)}
+/* Sprint 2.7 — planejamento e autoavaliação por competência. */
+.catalog-competency-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; }
+.catalog-competency.is-cancelled { opacity:.72; border-style:dashed; }
+.quick-assessment-dialog, .planning-details-dialog { width:min(620px,calc(100vw - 32px)); border:0; border-radius:var(--radius-lg); padding:0; background:var(--surface); color:var(--text); box-shadow:var(--shadow-lg); }
+.quick-assessment-dialog::backdrop, .planning-details-dialog::backdrop { background:rgb(15 23 42 / 62%); backdrop-filter:blur(3px); }
+.quick-assessment-card, .planning-details-card { padding:26px; }
+.assessment-choice-grid { display:grid; gap:.7rem; margin-top:1.2rem; }
+.assessment-choice { display:grid; gap:.2rem; text-align:left; padding:1rem; border:1px solid var(--border); border-radius:14px; background:var(--surface-2); color:var(--text); cursor:pointer; }
+.assessment-choice:hover, .assessment-choice.is-selected { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 18%,transparent); }
+.competency-overview-panel { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin:1.2rem 0; padding:1.2rem; border-radius:16px; background:var(--surface-2); }
+.competency-overview-panel > div:first-child { display:grid; gap:.25rem; }
+.competency-overview-panel strong { font-size:2rem; }
+.competency-planning-panel { display:flex; justify-content:space-between; align-items:end; gap:1rem; margin-bottom:1.2rem; padding:1rem; border:1px solid var(--border); border-radius:14px; }
+.levels-readonly { display:grid; gap:1rem; }
+.level-readonly-card { padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-2); }
+.level-readonly-card > .resource-list { margin-top:1rem; padding:0; }
+.resource-card-clean { background:var(--surface); }
+.planning-filters { grid-template-columns:repeat(3,minmax(160px,1fr)) auto; }
+.planning-card-competency { border-left:5px solid #2563eb; }
+.planning-resource-list { display:grid; gap:.45rem; padding:.75rem; border-radius:12px; background:color-mix(in srgb,#16a34a 10%,var(--surface)); }
+.planning-resource-row { display:flex; justify-content:space-between; gap:1rem; font-size:.88rem; }
+.planning-card-meta { display:flex; flex-wrap:wrap; gap:.5rem .8rem; color:var(--muted); font-size:.84rem; }
+.dual-timeline { display:grid; gap:2rem; overflow-x:auto; }
+.timeline-row { min-width:960px; display:grid; grid-template-columns:100px 1fr; gap:1rem; align-items:start; }
+.timeline-label { font-weight:800; padding-top:1.8rem; }
+.timeline-months { display:grid; grid-template-columns:repeat(12,minmax(70px,1fr)); border-top:5px solid; }
+.timeline-done .timeline-months { border-color:#1f2937; }
+.timeline-planned .timeline-months { border-color:#cbd5e1; }
+.timeline-month { min-height:110px; padding:.65rem .35rem; border-right:1px solid var(--border); }
+.timeline-month > span { color:var(--muted); font-size:.78rem; }
+.timeline-markers { display:grid; gap:.35rem; margin-top:.6rem; }
+.timeline-marker { border:0; border-radius:10px; padding:.45rem; text-align:left; font:inherit; font-size:.72rem; cursor:help; }
+.timeline-done .timeline-marker { background:#1f2937; color:#fff; }
+.timeline-planned .timeline-marker { background:#e2e8f0; color:#334155; }
+@media(max-width:760px){.competency-overview-panel,.competency-planning-panel{align-items:stretch;flex-direction:column}.planning-filters{grid-template-columns:1fr}}

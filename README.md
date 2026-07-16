@@ -1,5 +1,3 @@
-# Climb Map — Sprint 2.6
+# Climb Map — Sprint 2.7
 
-Atualização com Meu Mapa operacional, histórico para Evolução, distinção visual entre competência e recursos, trilhas pessoais por `usuario_destino` e planejamento com recursos em verde.
-
-Os CSVs existentes não estão incluídos neste pacote.
+Atualização de autoavaliação e planejamento por competência, status independentes de recursos, filtros do Kanban e timeline anual da página Evolução.
