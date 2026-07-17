@@ -62,19 +62,19 @@ class BusinessEngine {
     const competencies = dataService.getAll("competencias", { activeOnly: true });
     const resources = dataService.getAll("recursos", { activeOnly: true });
     const types = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, item.nome]));
-    const planning = userData.competencyProgress.filter(item => item.status && item.status !== "cancelado");
-    const resourceActive = userData.resourceProgress.filter(item => ["em_aberto", "em_andamento"].includes(item.status));
+    const planning = userData.competencyProgress.filter(item => ["BACKLOG","A_INICIAR","EM_ANDAMENTO","PAUSADA"].includes(item.status));
+    const resourceActive = userData.resourceProgress.filter(item => ["EM_ABERTO", "EM_ANDAMENTO"].includes(item.status));
     const inProgressCourses = resourceActive.map(progress => {
       const resource = resources.find(item => item.recurso_id === progress.resourceId);
       if (!resource) return null;
-      const level = dataService.getById("niveis", resource.nivel_id);
+      const level = dataService.getById("niveis", dataService.getLevelForResource(resource.recurso_id);
       const competency = level ? dataService.getById("competencias", level.competencia_id) : null;
-      return { ...resource, status: progress.status, progress, competencyId: competency?.competencia_id || progress.competencyId, competencyName: competency?.nome || "", levelName: level?.nome || "", typeName: types.get(resource.tipo_recurso_id) || "Recurso", url: resource.url_principal || "" };
+      return { ...resource, status: progress.status, progress, competencyId: competency?.competencia_id || progress.competencyId, competencyName: competency?.nome || "", levelName: level?.nome || "", typeName: types.get(resource.tipo_recurso_id) || resource.tipo_recurso || "Recurso", url: resource.url_principal || resource.url || "" };
     }).filter(Boolean);
-    const completedResources = userData.resourceProgress.filter(item => item.status === "concluido").length;
-    const completedCertifications = userData.resourceProgress.filter(item => item.status === "concluido").filter(progress => {
+    const completedResources = userData.resourceProgress.filter(item => item.status === "CONCLUIDO").length;
+    const completedCertifications = userData.resourceProgress.filter(item => item.status === "CONCLUIDO").filter(progress => {
       const resource = resources.find(item => item.recurso_id === progress.resourceId);
-      return /certifica/i.test(types.get(resource?.tipo_recurso_id) || "");
+      return /certifica/i.test(types.get(resource?.tipo_recurso_id) || resource?.tipo_recurso || "");
     }).length;
     const highestCategory = [...categories].sort((a,b) => b.score.percentage - a.score.percentage)[0] || null;
     const selectedTrailId = userData.selectedTrailId;
@@ -87,7 +87,7 @@ class BusinessEngine {
       assessedCompetencies: userData.competencyProgress.filter(item => item.assessmentId).length,
       totalCompetencies: competencies.length,
       planningItems: planning.length,
-      studyingNow: planning.filter(item => item.status === "em_andamento").length + resourceActive.filter(item => item.status === "em_andamento").length,
+      studyingNow: planning.filter(item => item.status === "EM_ANDAMENTO").length + resourceActive.filter(item => item.status === "EM_ANDAMENTO").length,
       completedResources,
       completedCertifications,
       favorites: userData.favorites.length,
@@ -102,19 +102,19 @@ class BusinessEngine {
     const userData = userDataService.getCurrentUserData();
     const resources = dataService.getAll("recursos", { activeOnly: true });
     const resourceTypes = new Map(configService.getResourceTypes().map(item => [item.tipo_recurso_id, String(item.nome || "")]));
-    const completedResources = userData.resourceProgress.filter(item => item.status === "concluido");
+    const completedResources = userData.resourceProgress.filter(item => item.status === "CONCLUIDO");
     const selectedTrailId = userData.selectedTrailId;
     const selectedTrail = selectedTrailId ? dataService.getById("trilhas", selectedTrailId) : null;
     const trailAnalysis = selectedTrail ? this.getTrailAnalysis(selectedTrailId) : null;
 
     return {
-      completedCompetencies: userData.competencyProgress.filter(item => item.status === "concluido").length,
-      developingCompetencies: userData.competencyProgress.filter(item => item.status === "em_andamento").length,
-      plannedCompetencies: userData.competencyProgress.filter(item => ["stand_by", "em_aberto"].includes(item.status)).length,
+      completedCompetencies: userData.competencyProgress.filter(item => item.status === "CICLO_ENCERRADO").length,
+      developingCompetencies: userData.competencyProgress.filter(item => item.status === "EM_ANDAMENTO").length,
+      plannedCompetencies: userData.competencyProgress.filter(item => ["BACKLOG", "A_INICIAR", "PAUSADA"].includes(item.status)).length,
       completedResources: completedResources.length,
       completedCertifications: completedResources.filter(progress => {
         const resource = resources.find(item => item.recurso_id === progress.resourceId);
-        return /certifica/i.test(resourceTypes.get(resource?.tipo_recurso_id) || "");
+        return /certifica/i.test(resourceTypes.get(resource?.tipo_recurso_id) || resource?.tipo_recurso || "");
       }).length,
       generalPercentage: this.getGeneralScore().percentage,
       trailPercentage: trailAnalysis ? trailAnalysis.score.percentage : null,
@@ -132,14 +132,14 @@ class BusinessEngine {
     for (const item of data.competencyProgress) {
       const competency = competencies.find(row => row.competencia_id === item.competencyId);
       if (!competency) continue;
-      if (item.status === "concluido" && item.completedAt && yearOf(item.completedAt) === Number(year)) completed.push({ date: item.completedAt, kind: "competencia", title: competency.nome, competencyId: competency.competencia_id, resources: relatedResources(item.competencyId, data, resources) });
-      if (item.targetDate && yearOf(item.targetDate) === Number(year) && item.status !== "concluido") planned.push({ date: item.targetDate, kind: "competencia", title: competency.nome, competencyId: competency.competencia_id, resources: relatedResources(item.competencyId, data, resources) });
+      if (item.status === "CICLO_ENCERRADO" && item.completedAt && yearOf(item.completedAt) === Number(year)) completed.push({ date: item.completedAt, kind: "competencia", title: competency.nome, competencyId: competency.competencia_id, resources: relatedResources(item.competencyId, data, resources) });
+      if (item.targetDate && yearOf(item.targetDate) === Number(year) && item.status !== "CICLO_ENCERRADO") planned.push({ date: item.targetDate, kind: "competencia", title: competency.nome, competencyId: competency.competencia_id, resources: relatedResources(item.competencyId, data, resources) });
     }
     for (const item of data.resourceProgress) {
       const resource = resources.find(row => row.recurso_id === item.resourceId);
       if (!resource) continue;
-      if (item.status === "concluido" && item.completedAt && yearOf(item.completedAt) === Number(year)) completed.push({ date: item.completedAt, kind: "recurso", title: resource.nome, competencyId: item.competencyId, resources: [] });
-      if (item.targetDate && yearOf(item.targetDate) === Number(year) && item.status !== "concluido") planned.push({ date: item.targetDate, kind: "recurso", title: resource.nome, competencyId: item.competencyId, resources: [] });
+      if (item.status === "CONCLUIDO" && item.completedAt && yearOf(item.completedAt) === Number(year)) completed.push({ date: item.completedAt, kind: "recurso", title: resource.nome, competencyId: item.competencyId, resources: [] });
+      if (item.targetDate && yearOf(item.targetDate) === Number(year) && item.status !== "CONCLUIDO") planned.push({ date: item.targetDate, kind: "recurso", title: resource.nome, competencyId: item.competencyId, resources: [] });
     }
     return { year: Number(year), completed: completed.sort(byDate), planned: planned.sort(byDate) };
   }

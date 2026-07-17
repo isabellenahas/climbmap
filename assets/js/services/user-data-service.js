@@ -1,211 +1,44 @@
 import { currentUser } from "../core/auth.js";
 import { loadState, saveState } from "../core/storage.js";
 
-/**
- * Dados individuais do Climb Map.
- * - Autoavaliação e planejamento pertencem à COMPETÊNCIA.
- * - Recursos possuem acompanhamento independente.
- * - Toda alteração relevante gera histórico para a página Evolução.
- */
+const ACTIVE_CYCLE_STATUSES=new Set(["BACKLOG","A_INICIAR","EM_ANDAMENTO","PAUSADA"]);
+
+/** Dados individuais locais. O modelo usa ciclos, sem confundir estudo com domínio. */
 class UserDataService {
-  getCurrentUserData() {
-    const user = currentUser();
-    if (!user) return createEmptyUserData();
-    const state = loadState();
-    state.userData[user.id] = normalizeUserData(state.userData[user.id] ?? createEmptyUserData());
-    saveState(state);
-    return structuredClone(state.userData[user.id]);
+  getCurrentUserData(){const user=currentUser();if(!user)return createEmptyUserData();const state=loadState();state.userData[user.id]=normalizeUserData(state.userData[user.id]??createEmptyUserData());saveState(state);return structuredClone(state.userData[user.id]);}
+  migrateToCompetencyModel(levels=[]){
+    const user=currentUser();if(!user)return;const state=loadState();const data=normalizeUserData(state.userData[user.id]??createEmptyUserData());
+    if(!data.competencyModelMigrated){const byLevel=new Map(levels.map(level=>[level.nivel_id,level.competencia_id]));for(const old of data.levelProgress){const competencyId=byLevel.get(old.levelId);if(!competencyId)continue;const target=upsert(data.competencyProgress,"competencyId",competencyId,emptyCompetencyProgress(competencyId));if(!target.assessmentId&&old.assessmentId)target.assessmentId=old.assessmentId;if(!target.status)target.status=mapLegacyCycleStatus(old.status);target.priority=Math.max(Number(target.priority||0),Number(old.priority||0));target.targetDate=target.targetDate||old.targetDate||"";target.notes=target.notes||old.notes||"";target.startedAt=target.startedAt||old.startedAt||"";target.completedAt=target.completedAt||old.completedAt||"";}data.competencyModelMigrated=true;data.competencyModelMigratedAt=nowIso();}
+    state.userData[user.id]=data;saveState(state);
   }
-
-  /** Converte automaticamente registros antigos por nível para registros por competência. */
-  migrateToCompetencyModel(levels = []) {
-    const user = currentUser();
-    if (!user) return;
-    const state = loadState();
-    const data = normalizeUserData(state.userData[user.id] ?? createEmptyUserData());
-    if (data.competencyModelMigrated) return;
-
-    const competencyByLevel = new Map(levels.map(level => [level.nivel_id, level.competencia_id]));
-    for (const old of data.levelProgress) {
-      const competencyId = competencyByLevel.get(old.levelId);
-      if (!competencyId) continue;
-      const target = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
-      if (!target.assessmentId && old.assessmentId) target.assessmentId = old.assessmentId;
-      const mappedStatus = mapLegacyStatus(old.status);
-      if (!target.status && mappedStatus) target.status = mappedStatus;
-      target.priority = Math.max(Number(target.priority || 0), Number(old.priority || 0));
-      target.targetDate = target.targetDate || old.targetDate || "";
-      target.notes = target.notes || old.notes || "";
-      target.startedAt = target.startedAt || old.startedAt || "";
-      target.completedAt = target.completedAt || old.completedAt || "";
-    }
-
-    data.competencyModelMigrated = true;
-    data.competencyModelMigratedAt = new Date().toISOString();
-    state.userData[user.id] = data;
-    saveState(state);
-  }
-
-  getCompetencyProgress(competencyId) {
-    return this.getCurrentUserData().competencyProgress.find(item => item.competencyId === competencyId) ?? null;
-  }
-
-  setCompetencyAssessment(competencyId, assessmentId) {
-    return this.updateUserData(data => {
-      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
-      const previous = item.assessmentId;
-      item.assessmentId = assessmentId;
-      item.updatedAt = nowIso();
-      if (previous !== assessmentId) addHistory(data, "autoavaliacao_alterada", "competencia", competencyId, previous, assessmentId);
-    });
-  }
-
-  setCompetencyStatus(competencyId, status, options = {}) {
-    return this.updateUserData(data => {
-      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
-      const previous = item.status;
-      const now = nowIso();
-      item.status = status;
-      if (status === "em_andamento" && !item.startedAt) item.startedAt = now;
-      if (status === "concluido") item.completedAt = options.completedAt || item.completedAt || today();
-      if (status !== "concluido" && previous === "concluido") item.completedAt = "";
-      if (status === "cancelado") item.cancelledAt = now;
-      item.updatedAt = now;
-      if (previous !== status) addHistory(data, status === "concluido" ? "competencia_concluida" : "competencia_status_alterado", "competencia", competencyId, previous, status, item.completedAt || "");
-    });
-  }
-
-  setCompetencyPlanningDetails(competencyId, details = {}) {
-    return this.updateUserData(data => {
-      const item = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
-      if (Object.hasOwn(details, "priority")) item.priority = Number(details.priority) || 0;
-      if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
-      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
-      item.updatedAt = nowIso();
-      if (item.targetDate) addHistory(data, "competencia_planejada", "competencia", competencyId, "", item.targetDate, item.targetDate);
-    });
-  }
-
-  getPlanningItems() {
-    return this.getCurrentUserData().competencyProgress.filter(item => item.status && item.status !== "cancelado");
-  }
-
-  toggleFavorite(competencyId) {
-    return this.updateUserData(data => {
-      const index = data.favorites.indexOf(competencyId);
-      if (index >= 0) data.favorites.splice(index, 1);
-      else data.favorites.push(competencyId);
-    });
-  }
-
-  isFavorite(competencyId) { return this.getCurrentUserData().favorites.includes(competencyId); }
-  setSelectedTrail(trailId) { return this.updateUserData(data => { data.selectedTrailId = trailId || ""; data.selectedTrailUpdatedAt = nowIso(); }); }
-  getSelectedTrailId() { return this.getCurrentUserData().selectedTrailId; }
-
-  getResourceProgress(resourceId) {
-    return this.getCurrentUserData().resourceProgress.find(item => item.resourceId === resourceId) ?? null;
-  }
-
-  /**
-   * Atualiza o recurso e sincroniza a competência associada.
-   * O sistema pode avançar o status da competência, mas nunca retrocede automaticamente.
-   */
-  setResourceStatus(resourceId, status, competencyId = "") {
-    return this.updateUserData(data => {
-      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
-      const previous = item.status;
-      const now = nowIso();
-      item.status = status;
-      item.competencyId = competencyId || item.competencyId;
-      if (status === "em_andamento" && !item.startedAt) item.startedAt = today();
-      if (status === "concluido") item.completedAt = item.completedAt || today();
-      if (status !== "concluido" && previous === "concluido") item.completedAt = "";
-      if (status === "cancelado") item.cancelledAt = now;
-      item.updatedAt = now;
-      if (previous !== status) addHistory(data, status === "concluido" ? "recurso_concluido" : "recurso_status_alterado", "recurso", resourceId, previous, status, item.completedAt || item.targetDate || "");
-      if (item.competencyId) syncCompetencyFromResources(data, item.competencyId);
-    });
-  }
-
-  setResourceDetails(resourceId, details = {}, competencyId = "") {
-    return this.updateUserData(data => {
-      const item = upsert(data.resourceProgress, "resourceId", resourceId, emptyResourceProgress(resourceId));
-      item.competencyId = competencyId || item.competencyId;
-      if (Object.hasOwn(details, "startedAt")) item.startedAt = String(details.startedAt || "");
-      if (Object.hasOwn(details, "targetDate")) item.targetDate = String(details.targetDate || "");
-      if (Object.hasOwn(details, "completedAt")) item.completedAt = String(details.completedAt || "");
-      if (Object.hasOwn(details, "expiresAt")) item.expiresAt = String(details.expiresAt || "");
-      if (Object.hasOwn(details, "evidenceUrl")) item.evidenceUrl = String(details.evidenceUrl || "").trim();
-      if (Object.hasOwn(details, "notes")) item.notes = String(details.notes || "").trim();
-      item.updatedAt = nowIso();
-      if (item.targetDate) addHistory(data, "recurso_planejado", "recurso", resourceId, "", item.targetDate, item.targetDate);
-      if (item.competencyId) syncCompetencyFromResources(data, item.competencyId);
-    });
-  }
-
-  getHistory(year = null) {
-    const events = this.getCurrentUserData().history;
-    return year ? events.filter(item => new Date(item.date).getFullYear() === Number(year)) : events;
-  }
-
-  updateUserData(mutator) {
-    const user = currentUser();
-    if (!user) throw new Error("Nenhum usuário autenticado.");
-    const state = loadState();
-    state.userData[user.id] = normalizeUserData(state.userData[user.id] ?? createEmptyUserData());
-    mutator(state.userData[user.id]);
-    saveState(state);
-    return structuredClone(state.userData[user.id]);
-  }
+  getCompetencyProgress(competencyId){return this.getCurrentUserData().competencyProgress.find(item=>item.competencyId===competencyId)??null;}
+  setCompetencyAssessment(competencyId,assessmentId){return this.updateUserData(data=>{const item=upsert(data.competencyProgress,"competencyId",competencyId,emptyCompetencyProgress(competencyId));const previous=item.assessmentId;item.assessmentId=assessmentId;item.updatedAt=nowIso();if(previous!==assessmentId)addHistory(data,"AUTOAVALIACAO_REALIZADA","COMPETENCIA",competencyId,previous,assessmentId);});}
+  setCompetencyStatus(competencyId,status,options={}){return this.updateUserData(data=>{const item=upsert(data.competencyProgress,"competencyId",competencyId,emptyCompetencyProgress(competencyId));const previous=item.status;const next=mapLegacyCycleStatus(status);if(["CICLO_ENCERRADO","CANCELADA"].includes(previous)&&ACTIVE_CYCLE_STATUSES.has(next)){data.cycleHistory.push({...structuredClone(item),archivedAt:nowIso()});Object.assign(item,emptyCompetencyProgress(competencyId),{assessmentId:item.assessmentId,status:next});}
+    item.status=next;if(next==="EM_ANDAMENTO"&&!item.startedAt)item.startedAt=nowIso();if(next==="CICLO_ENCERRADO")item.completedAt=options.completedAt||item.completedAt||today();if(next!=="CICLO_ENCERRADO"&&previous==="CICLO_ENCERRADO")item.completedAt="";if(next==="CANCELADA")item.cancelledAt=nowIso();item.pendingSuggestion="";item.updatedAt=nowIso();if(previous!==next)addHistory(data,next==="CICLO_ENCERRADO"?"CICLO_ENCERRADO":next==="CANCELADA"?"CICLO_CANCELADO":"CICLO_STATUS_ALTERADO","CICLO",item.cycleId,previous,next,item.completedAt||"");});}
+  setCompetencyPlanningDetails(competencyId,details={}){return this.updateUserData(data=>{const item=upsert(data.competencyProgress,"competencyId",competencyId,emptyCompetencyProgress(competencyId));if(Object.hasOwn(details,"priority"))item.priority=Number(details.priority)||0;if(Object.hasOwn(details,"targetDate"))item.targetDate=String(details.targetDate||"");if(Object.hasOwn(details,"notes"))item.notes=String(details.notes||"").trim();if(Object.hasOwn(details,"objective"))item.objective=String(details.objective||"").trim();item.updatedAt=nowIso();if(item.targetDate)addHistory(data,"CICLO_PLANEJADO","CICLO",item.cycleId,"",item.targetDate,item.targetDate);});}
+  getPlanningItems(){return this.getCurrentUserData().competencyProgress.filter(item=>ACTIVE_CYCLE_STATUSES.has(item.status));}
+  toggleFavorite(competencyId){return this.updateUserData(data=>{const i=data.favorites.indexOf(competencyId);if(i>=0)data.favorites.splice(i,1);else data.favorites.push(competencyId);});}
+  isFavorite(competencyId){return this.getCurrentUserData().favorites.includes(competencyId);}
+  setSelectedTrail(trailId){return this.updateUserData(data=>{data.selectedTrailId=trailId||"";data.selectedTrailUpdatedAt=nowIso();});}
+  getSelectedTrailId(){return this.getCurrentUserData().selectedTrailId;}
+  getResourceProgress(resourceId,competencyId=""){const data=this.getCurrentUserData();const cycle=competencyId?data.competencyProgress.find(item=>item.competencyId===competencyId):null;return [...data.resourceProgress].reverse().find(item=>item.resourceId===resourceId&&(!cycle||item.cycleId===cycle.cycleId))??null;}
+  setResourceStatus(resourceId,status,competencyId=""){return this.updateUserData(data=>{const cycle=ensureCycle(data,competencyId);const item=upsertResource(data,resourceId,cycle?.cycleId||"");const previous=item.status;item.status=mapLegacyResourceStatus(status);item.competencyId=competencyId||item.competencyId;item.planned=true;if(item.status==="EM_ANDAMENTO"&&!item.startedAt)item.startedAt=today();if(item.status==="CONCLUIDO")item.completedAt=item.completedAt||today();if(item.status!=="CONCLUIDO"&&previous==="CONCLUIDO")item.completedAt="";if(item.status==="CANCELADO")item.cancelledAt=nowIso();item.updatedAt=nowIso();if(previous!==item.status)addHistory(data,item.status==="CONCLUIDO"?"RECURSO_CONCLUIDO":"RECURSO_STATUS_ALTERADO","RECURSO",resourceId,previous,item.status,item.completedAt||item.targetDate||"");if(cycle)syncCycleFromResources(data,cycle);});}
+  setResourceDetails(resourceId,details={},competencyId=""){return this.updateUserData(data=>{const cycle=ensureCycle(data,competencyId);const item=upsertResource(data,resourceId,cycle?.cycleId||"");item.competencyId=competencyId||item.competencyId;item.planned=true;if(Object.hasOwn(details,"startedAt"))item.startedAt=String(details.startedAt||"");if(Object.hasOwn(details,"targetDate"))item.targetDate=String(details.targetDate||"");if(Object.hasOwn(details,"completedAt"))item.completedAt=String(details.completedAt||"");if(Object.hasOwn(details,"expiresAt"))item.expiresAt=String(details.expiresAt||"");if(Object.hasOwn(details,"evidenceUrl"))item.evidenceUrl=String(details.evidenceUrl||"").trim();if(Object.hasOwn(details,"notes"))item.notes=String(details.notes||"").trim();item.updatedAt=nowIso();if(item.targetDate)addHistory(data,"RECURSO_PLANEJADO","RECURSO",resourceId,"",item.targetDate,item.targetDate);if(cycle)syncCycleFromResources(data,cycle);});}
+  getCycleSuggestion(competencyId){const item=this.getCompetencyProgress(competencyId);return item?.pendingSuggestion||"";}
+  getHistory(year=null){const events=this.getCurrentUserData().history;return year?events.filter(item=>new Date(item.date).getFullYear()===Number(year)):events;}
+  updateUserData(mutator){const user=currentUser();if(!user)throw new Error("Nenhum usuário autenticado.");const state=loadState();state.userData[user.id]=normalizeUserData(state.userData[user.id]??createEmptyUserData());mutator(state.userData[user.id]);saveState(state);return structuredClone(state.userData[user.id]);}
 }
-
-function syncCompetencyFromResources(data, competencyId) {
-  const resources = data.resourceProgress.filter(item => item.competencyId === competencyId && item.status && item.status !== "cancelado");
-  if (!resources.length) return;
-  const competency = upsert(data.competencyProgress, "competencyId", competencyId, emptyCompetencyProgress(competencyId));
-  const rank = { stand_by: 0, em_aberto: 1, em_andamento: 2, concluido: 3 };
-  const previous = competency.status;
-  let proposed = "";
-  if (resources.some(item => item.status === "em_andamento")) proposed = "em_andamento";
-  else if (resources.some(item => item.status === "em_aberto")) proposed = "em_aberto";
-  else if (resources.every(item => item.status === "concluido")) proposed = "concluido";
-  if (!proposed) return;
-  if (proposed === "concluido" || !previous || previous === "cancelado" || (rank[proposed] ?? 0) > (rank[previous] ?? 0)) {
-    competency.status = proposed;
-    if (proposed === "em_andamento" && !competency.startedAt) competency.startedAt = today();
-    if (proposed === "concluido") competency.completedAt = competency.completedAt || today();
-    competency.updatedAt = nowIso();
-    if (previous !== proposed) addHistory(data, proposed === "concluido" ? "competencia_concluida" : "competencia_status_alterado", "competencia", competencyId, previous, proposed, competency.completedAt || "");
-  }
-}
-
-function emptyCompetencyProgress(competencyId) {
-  return { competencyId, assessmentId: "", status: "", priority: 0, targetDate: "", notes: "", addedAt: nowIso(), startedAt: "", completedAt: "", cancelledAt: "", updatedAt: null };
-}
-function emptyResourceProgress(resourceId) {
-  return { resourceId, competencyId: "", status: "", startedAt: "", targetDate: "", completedAt: "", expiresAt: "", evidenceUrl: "", notes: "", cancelledAt: "", updatedAt: null };
-}
-function addHistory(data, type, entityType, entityId, previousValue = "", newValue = "", effectiveDate = "") {
-  data.history.push({ id: `EVT-${Date.now()}-${Math.random().toString(16).slice(2)}`, date: effectiveDate || nowIso(), type, entityType, entityId, previousValue, newValue, createdAt: nowIso() });
-}
-function upsert(collection, key, value, initialValue) { let item = collection.find(entry => entry[key] === value); if (!item) { item = structuredClone(initialValue); collection.push(item); } return item; }
-function normalizeUserData(data) {
-  return {
-    competencyProgress: Array.isArray(data.competencyProgress) ? data.competencyProgress.map(item => ({ ...emptyCompetencyProgress(item.competencyId), ...item, status: mapLegacyStatus(item.status) })) : [],
-    resourceProgress: Array.isArray(data.resourceProgress) ? data.resourceProgress.map(item => ({ ...emptyResourceProgress(item.resourceId), ...item, status: mapLegacyStatus(item.status) })) : [],
-    levelProgress: Array.isArray(data.levelProgress) ? data.levelProgress : [],
-    plans: Array.isArray(data.plans) ? data.plans : [],
-    planItems: Array.isArray(data.planItems) ? data.planItems : [],
-    favorites: Array.isArray(data.favorites) ? data.favorites : [],
-    history: Array.isArray(data.history) ? data.history : [],
-    selectedTrailId: typeof data.selectedTrailId === "string" ? data.selectedTrailId : "",
-    selectedTrailUpdatedAt: data.selectedTrailUpdatedAt ?? null,
-    competencyModelMigrated: Boolean(data.competencyModelMigrated),
-    competencyModelMigratedAt: data.competencyModelMigratedAt ?? null
-  };
-}
-function mapLegacyStatus(status) { return ({ interesse: "em_aberto", vou_estudar: "em_aberto", estudando: "em_andamento", concluido: "concluido", pausado: "stand_by", stand_by: "stand_by", em_aberto: "em_aberto", em_andamento: "em_andamento", cancelado: "cancelado" })[status] || status || ""; }
-function createEmptyUserData() { return normalizeUserData({}); }
-function nowIso() { return new Date().toISOString(); }
-function today() { return new Date().toISOString().slice(0, 10); }
-export const userDataService = new UserDataService();
+function ensureCycle(data,competencyId){if(!competencyId)return null;return upsert(data.competencyProgress,"competencyId",competencyId,emptyCompetencyProgress(competencyId));}
+function syncCycleFromResources(data,cycle){const resources=data.resourceProgress.filter(item=>item.cycleId===cycle.cycleId&&item.planned&&item.status);if(!resources.length)return;const previous=cycle.status;if(resources.some(item=>item.status==="EM_ANDAMENTO")){cycle.status="EM_ANDAMENTO";cycle.pendingSuggestion="";if(!cycle.startedAt)cycle.startedAt=today();}else if(resources.some(item=>item.status==="EM_ABERTO")&&(!cycle.status||cycle.status==="BACKLOG")){cycle.status="A_INICIAR";cycle.pendingSuggestion="";}else if(resources.every(item=>item.status==="CONCLUIDO")){cycle.pendingSuggestion="CICLO_ENCERRADO";}else if(resources.every(item=>item.status==="CANCELADO")){cycle.pendingSuggestion="PAUSADA";}if(previous!==cycle.status)addHistory(data,"CICLO_STATUS_ALTERADO","CICLO",cycle.cycleId,previous,cycle.status);cycle.updatedAt=nowIso();}
+function upsertResource(data,resourceId,cycleId){let item=data.resourceProgress.find(entry=>entry.resourceId===resourceId&&entry.cycleId===cycleId);if(!item){item=emptyResourceProgress(resourceId,cycleId);data.resourceProgress.push(item);}return item;}
+function emptyCompetencyProgress(competencyId){return{competencyId,cycleId:newId("CIC"),assessmentId:"",status:"",priority:0,targetDate:"",objective:"",notes:"",pendingSuggestion:"",addedAt:nowIso(),startedAt:"",completedAt:"",cancelledAt:"",updatedAt:null};}
+function emptyResourceProgress(resourceId,cycleId=""){return{id:newId("PRR"),resourceId,competencyId:"",cycleId,status:"",planned:false,requiredInCycle:false,startedAt:"",targetDate:"",completedAt:"",expiresAt:"",evidenceUrl:"",notes:"",cancelledAt:"",updatedAt:null};}
+function addHistory(data,type,entityType,entityId,previousValue="",newValue="",effectiveDate=""){data.history.push({id:newId("EVT"),date:effectiveDate||nowIso(),type,entityType,entityId,previousValue,newValue,createdAt:nowIso()});}
+function upsert(collection,key,value,initialValue){let item=collection.find(entry=>entry[key]===value);if(!item){item=structuredClone(initialValue);collection.push(item);}return item;}
+function normalizeUserData(data){const competencyProgress=Array.isArray(data.competencyProgress)?data.competencyProgress.map(item=>({...emptyCompetencyProgress(item.competencyId),...item,cycleId:item.cycleId||newId("CIC"),status:mapLegacyCycleStatus(item.status)})):[];const cycleByCompetency=new Map(competencyProgress.map(item=>[item.competencyId,item.cycleId]));return{competencyProgress,resourceProgress:Array.isArray(data.resourceProgress)?data.resourceProgress.map(item=>({...emptyResourceProgress(item.resourceId),...item,id:item.id||newId("PRR"),cycleId:item.cycleId||cycleByCompetency.get(item.competencyId)||"",status:mapLegacyResourceStatus(item.status),planned:item.planned!==false})):[],cycleHistory:Array.isArray(data.cycleHistory)?data.cycleHistory:[],levelProgress:Array.isArray(data.levelProgress)?data.levelProgress:[],plans:Array.isArray(data.plans)?data.plans:[],planItems:Array.isArray(data.planItems)?data.planItems:[],favorites:Array.isArray(data.favorites)?data.favorites:[],history:Array.isArray(data.history)?data.history:[],selectedTrailId:typeof data.selectedTrailId==="string"?data.selectedTrailId:"",selectedTrailUpdatedAt:data.selectedTrailUpdatedAt??null,competencyModelMigrated:Boolean(data.competencyModelMigrated),competencyModelMigratedAt:data.competencyModelMigratedAt??null};}
+function mapLegacyCycleStatus(status){return({interesse:"A_INICIAR",vou_estudar:"A_INICIAR",estudando:"EM_ANDAMENTO",concluido:"CICLO_ENCERRADO",pausado:"PAUSADA",stand_by:"BACKLOG",em_aberto:"A_INICIAR",em_andamento:"EM_ANDAMENTO",cancelado:"CANCELADA",BACKLOG:"BACKLOG",A_INICIAR:"A_INICIAR",EM_ANDAMENTO:"EM_ANDAMENTO",PAUSADA:"PAUSADA",CICLO_ENCERRADO:"CICLO_ENCERRADO",CANCELADA:"CANCELADA"})[status]||status||"";}
+function mapLegacyResourceStatus(status){return({interesse:"EM_ABERTO",vou_estudar:"EM_ABERTO",estudando:"EM_ANDAMENTO",em_aberto:"EM_ABERTO",em_andamento:"EM_ANDAMENTO",concluido:"CONCLUIDO",cancelado:"CANCELADO",EM_ABERTO:"EM_ABERTO",EM_ANDAMENTO:"EM_ANDAMENTO",CONCLUIDO:"CONCLUIDO",CANCELADO:"CANCELADO"})[status]||status||"";}
+function createEmptyUserData(){return normalizeUserData({});}
+function newId(prefix){return`${prefix}-${Date.now()}-${Math.random().toString(16).slice(2,8)}`;}
+function nowIso(){return new Date().toISOString();}function today(){return new Date().toISOString().slice(0,10);}
+export const userDataService=new UserDataService();

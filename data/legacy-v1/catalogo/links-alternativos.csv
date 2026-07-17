@@ -1,0 +1,6 @@
+link_id,recurso_id,tipo_link,url,rotulo,ordem,ativo,observacoes
+LNK001,REC001,pagina_oficial,https://example.com/recurso-001,Pagina oficial do curso,1,true,Link de teste tecnico.
+LNK002,REC001,material_complementar,https://example.com/recurso-001-material,Material complementar do curso,2,true,Link de teste tecnico.
+LNK003,REC011,inscricao,https://learn.microsoft.com/certifications/power-bi-data-analyst-associate/,Inscricao para a certificacao,1,true,Link de teste tecnico.
+LNK004,REC015,documentacao,https://learn.microsoft.com/power-bi/transform-model/desktop-relationships-understand,Documentacao detalhada sobre relacionamentos,1,true,Link de teste tecnico.
+LNK005,REC017,pagina_oficial,https://example.com/recurso-017,Pagina oficial do livro,1,true,Link de teste tecnico.

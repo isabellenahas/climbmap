@@ -1,0 +1,13 @@
+﻿ID,Grupo,Valor_Tecnico,Nome_Exibicao,Descricao,Ordem,Ativo,Observacoes
+LST001,STATUS_CICLO,BACKLOG,Backlog,Selecionado para estudo futuro,1,True,
+LST002,STATUS_CICLO,A_INICIAR,A iniciar,Priorizado sem atividade iniciada,2,True,
+LST003,STATUS_CICLO,EM_ANDAMENTO,Em andamento,Possui estudo ativo,3,True,
+LST004,STATUS_CICLO,PAUSADA,Pausada,Ciclo temporariamente suspenso,4,True,
+LST005,STATUS_CICLO,CICLO_ENCERRADO,Ciclo encerrado,Objetivo do ciclo atual encerrado,5,True,
+LST006,STATUS_CICLO,CANCELADA,Cancelada,Removida do planejamento ativo,6,True,
+LST007,STATUS_RECURSO,EM_ABERTO,Em aberto,Selecionado e ainda não iniciado,1,True,
+LST008,STATUS_RECURSO,EM_ANDAMENTO,Em andamento,Recurso iniciado,2,True,
+LST009,STATUS_RECURSO,CONCLUIDO,Concluído,Recurso finalizado,3,True,
+LST010,STATUS_RECURSO,CANCELADO,Cancelado,Recurso abandonado,4,True,
+LST011,TIPO_PARTICIPACAO_TRILHA,ESSENCIAL,Essencial,,1,True,
+LST012,TIPO_PARTICIPACAO_TRILHA,COMPLEMENTAR,Complementar,,2,True,

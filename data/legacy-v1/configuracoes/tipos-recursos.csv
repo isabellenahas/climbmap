@@ -1,0 +1,9 @@
+tipo_recurso_id,nome,descricao,permite_expiracao,ordem,ativo
+TPR001,Curso,Curso online ou presencial sobre um tema especifico.,false,1,true
+TPR002,Certificacao,Certificacao emitida por instituicao ou fornecedor reconhecido.,true,2,true
+TPR003,Livro,Livro fisico ou digital sobre o tema.,false,3,true
+TPR004,Artigo,Artigo tecnico ou publicacao curta sobre o tema.,false,4,true
+TPR005,Video,Video ou palestra gravada sobre o tema.,false,5,true
+TPR006,Documentacao Oficial,Documentacao tecnica oficial de uma ferramenta ou linguagem.,false,6,true
+TPR007,Projeto,Projeto pratico para aplicacao dos conhecimentos.,false,7,true
+TPR008,Laboratorio,Ambiente pratico guiado para exercitar habilidades tecnicas.,false,8,true
