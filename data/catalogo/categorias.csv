@@ -1,4 +1,4 @@
-categoria_id,nome,descricao,icone,cor,ordem,ativo,data_criacao,data_atualizacao,observacoes
-CAT001,Dados,Competencias tecnicas relacionadas a bancos de dados e engenharia de dados.,database,#3366FF,1,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
-CAT002,Dataviz,Competencias relacionadas a visualizacao e apresentacao de dados.,chart,#FF6633,2,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
-CAT003,Lideranca e Gestao,Competencias comportamentais e de gestao de pessoas e times.,users,#33CC99,3,true,2024-01-10,2024-06-01,Categoria de teste tecnico.
+﻿ID,Nome,Descricao,Icone,Ordem,Ativo,Data_Criacao,Data_Atualizacao,Observacoes
+CAT001,Processos,Área de desenvolvimento profissional: Processos.,,1,True,2026-07-17,2026-07-17,Origem: coluna Área da planilha Heatmap_BI_Conteudos_v2.
+CAT002,Sistemas,Área de desenvolvimento profissional: Sistemas.,,2,True,2026-07-17,2026-07-17,Origem: coluna Área da planilha Heatmap_BI_Conteudos_v2.
+CAT003,Dados,Área de desenvolvimento profissional: Dados.,,3,True,2026-07-17,2026-07-17,Origem: coluna Área da planilha Heatmap_BI_Conteudos_v2.
