@@ -1,78 +1,289 @@
 {
-  "schemaVersion": "1.0.0",
-  "dataVersion": "0.1.0",
+  "schemaVersion": "2.0.0",
+  "dataVersion": "0.2.0",
   "publishedAt": null,
-  "source": "Google Sheets - exportacao manual em CSV",
+  "source": "CSV versionado no GitHub; dados de uso permanecem no localStorage na V2 inicial",
   "datasets": {
+    "glossario": {
+      "path": "data/governanca/00_Glossario.csv",
+      "idColumn": "id",
+      "requiredColumns": [
+        "id",
+        "termo",
+        "definicao"
+      ]
+    },
+    "listasSuspensas": {
+      "path": "data/governanca/00_Listas_Suspensas.csv",
+      "idColumn": "id",
+      "requiredColumns": [
+        "id",
+        "grupo",
+        "valor_tecnico",
+        "nome_exibicao",
+        "ordem",
+        "ativo"
+      ]
+    },
+    "fontes": {
+      "path": "data/governanca/00_Fontes.csv",
+      "idColumn": "id",
+      "requiredColumns": [
+        "id",
+        "nome",
+        "tipo_fonte",
+        "ativo"
+      ]
+    },
+    "rastreabilidade": {
+      "path": "data/governanca/00_Rastreabilidade_Fonte.csv",
+      "idColumn": "id",
+      "requiredColumns": [
+        "id",
+        "tipo_item_destino",
+        "id_item_destino"
+      ]
+    },
     "categorias": {
-      "path": "data/catalogo/categorias.csv",
+      "path": "data/catalogo/01_Categorias.csv",
       "idColumn": "categoria_id",
-      "requiredColumns": ["categoria_id", "nome", "ordem", "ativo"]
+      "requiredColumns": [
+        "categoria_id",
+        "nome",
+        "ordem",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "categoria_id",
+        "id_categoria": "categoria_id"
+      }
     },
     "dominios": {
-      "path": "data/catalogo/dominios.csv",
+      "path": "data/catalogo/02_Dominios.csv",
       "idColumn": "dominio_id",
-      "requiredColumns": ["dominio_id", "categoria_id", "nome", "ordem", "ativo"]
+      "requiredColumns": [
+        "dominio_id",
+        "categoria_id",
+        "nome",
+        "ordem",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "dominio_id",
+        "id_dominio": "dominio_id",
+        "id_categoria": "categoria_id"
+      }
     },
     "competencias": {
-      "path": "data/catalogo/competencias.csv",
+      "path": "data/catalogo/03_Competencias.csv",
       "idColumn": "competencia_id",
-      "requiredColumns": ["competencia_id", "dominio_id", "nome", "peso", "ativo"]
-    },
-    "prerequisitos": {
-      "path": "data/catalogo/prerequisitos.csv",
-      "idColumn": null,
-      "requiredColumns": ["competencia_id", "competencia_prerequisito_id"]
+      "requiredColumns": [
+        "competencia_id",
+        "dominio_id",
+        "nome",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "competencia_id",
+        "id_competencia": "competencia_id",
+        "id_dominio": "dominio_id"
+      }
     },
     "niveis": {
-      "path": "data/catalogo/niveis.csv",
+      "path": "data/catalogo/04_Niveis.csv",
       "idColumn": "nivel_id",
-      "requiredColumns": ["nivel_id", "competencia_id", "nome", "ordem", "peso", "ativo"]
+      "requiredColumns": [
+        "nivel_id",
+        "competencia_id",
+        "nome",
+        "ordem",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "nivel_id",
+        "id_nivel": "nivel_id",
+        "id_competencia": "competencia_id"
+      }
+    },
+    "conteudosNiveis": {
+      "path": "data/catalogo/04_Conteudos_Niveis.csv",
+      "idColumn": "conteudo_id",
+      "requiredColumns": [
+        "conteudo_id",
+        "nivel_id",
+        "nome",
+        "ordem",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "conteudo_id",
+        "id_conteudo": "conteudo_id",
+        "id_nivel": "nivel_id"
+      }
     },
     "recursos": {
-      "path": "data/catalogo/recursos.csv",
+      "path": "data/catalogo/05_Recursos.csv",
       "idColumn": "recurso_id",
-      "requiredColumns": ["recurso_id", "nivel_id", "tipo_recurso_id", "nome", "ativo"]
+      "requiredColumns": [
+        "recurso_id",
+        "nome",
+        "tipo_recurso",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "recurso_id",
+        "id_recurso": "recurso_id"
+      }
     },
-    "linksAlternativos": {
-      "path": "data/catalogo/links-alternativos.csv",
-      "idColumn": "link_id",
-      "requiredColumns": ["link_id", "recurso_id", "url", "ativo"]
+    "nivelRecursos": {
+      "path": "data/catalogo/05_Nivel_Recursos.csv",
+      "idColumn": "nivel_recurso_id",
+      "requiredColumns": [
+        "nivel_recurso_id",
+        "nivel_id",
+        "recurso_id"
+      ],
+      "columnAliases": {
+        "id": "nivel_recurso_id",
+        "id_nivel": "nivel_id",
+        "id_recurso": "recurso_id"
+      }
+    },
+    "preRequisitos": {
+      "path": "data/catalogo/05_Pre_Requisitos.csv",
+      "idColumn": "pre_requisito_id",
+      "requiredColumns": [
+        "pre_requisito_id",
+        "tipo_item_origem",
+        "id_item_origem",
+        "tipo_item_pre_requisito",
+        "id_item_pre_requisito"
+      ],
+      "columnAliases": {
+        "id": "pre_requisito_id"
+      }
     },
     "trilhas": {
-      "path": "data/trilhas/trilhas.csv",
+      "path": "data/catalogo/06_Trilhas.csv",
       "idColumn": "trilha_id",
-      "requiredColumns": ["trilha_id", "nome", "ativo"]
+      "requiredColumns": [
+        "trilha_id",
+        "nome",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "trilha_id",
+        "id_trilha": "trilha_id"
+      }
     },
     "trilhaCompetencias": {
-      "path": "data/trilhas/trilha-competencias.csv",
-      "idColumn": null,
-      "requiredColumns": ["trilha_id", "competencia_id", "nivel_minimo_id", "peso", "obrigatorio"]
+      "path": "data/catalogo/06_Trilha_Competencias.csv",
+      "idColumn": "trilha_competencia_id",
+      "requiredColumns": [
+        "trilha_competencia_id",
+        "trilha_id",
+        "competencia_id",
+        "nivel_minimo_id",
+        "obrigatorio"
+      ],
+      "columnAliases": {
+        "id": "trilha_competencia_id",
+        "id_trilha": "trilha_id",
+        "id_competencia": "competencia_id",
+        "id_nivel_minimo": "nivel_minimo_id"
+      }
+    },
+    "trilhaRecursos": {
+      "path": "data/catalogo/06_Trilha_Recursos.csv",
+      "idColumn": "trilha_recurso_id",
+      "requiredColumns": [
+        "trilha_recurso_id",
+        "trilha_id",
+        "recurso_id"
+      ],
+      "columnAliases": {
+        "id": "trilha_recurso_id",
+        "id_trilha": "trilha_id",
+        "id_recurso": "recurso_id"
+      }
+    },
+    "usuariosCatalogo": {
+      "path": "data/catalogo/07_Usuarios.csv",
+      "idColumn": "usuario_id",
+      "requiredColumns": [
+        "usuario_id",
+        "nome_exibicao",
+        "perfil",
+        "ativo"
+      ],
+      "columnAliases": {
+        "id": "usuario_id",
+        "id_usuario": "usuario_id"
+      }
+    },
+    "configuracoesV2": {
+      "path": "data/catalogo/09_Configuracoes.csv",
+      "idColumn": "id",
+      "requiredColumns": [
+        "id",
+        "chave",
+        "valor",
+        "tipo",
+        "grupo",
+        "ativo"
+      ]
     },
     "autoavaliacao": {
       "path": "data/configuracoes/autoavaliacao.csv",
       "idColumn": "autoavaliacao_id",
-      "requiredColumns": ["autoavaliacao_id", "nome", "valor", "ordem", "ativo"]
+      "requiredColumns": [
+        "autoavaliacao_id",
+        "nome",
+        "valor",
+        "ordem",
+        "ativo"
+      ]
     },
     "tiposRecursos": {
       "path": "data/configuracoes/tipos-recursos.csv",
       "idColumn": "tipo_recurso_id",
-      "requiredColumns": ["tipo_recurso_id", "nome", "ativo"]
+      "requiredColumns": [
+        "tipo_recurso_id",
+        "nome",
+        "ativo"
+      ]
     },
     "status": {
       "path": "data/configuracoes/status.csv",
       "idColumn": "status_id",
-      "requiredColumns": ["status_id", "contexto", "nome", "ordem", "ativo"]
+      "requiredColumns": [
+        "status_id",
+        "contexto",
+        "nome",
+        "ordem",
+        "ativo"
+      ]
     },
     "complexidades": {
       "path": "data/configuracoes/complexidades.csv",
       "idColumn": "complexidade_id",
-      "requiredColumns": ["complexidade_id", "nome", "peso", "ordem", "ativo"]
+      "requiredColumns": [
+        "complexidade_id",
+        "nome",
+        "peso",
+        "ordem",
+        "ativo"
+      ]
     },
     "pesos": {
       "path": "data/configuracoes/pesos.csv",
       "idColumn": "peso_id",
-      "requiredColumns": ["peso_id", "chave", "valor", "ativo"]
+      "requiredColumns": [
+        "peso_id",
+        "chave",
+        "valor",
+        "ativo"
+      ]
     }
   }
 }

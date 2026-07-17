@@ -1,0 +1,6 @@
+competencia_id,competencia_prerequisito_id,obrigatorio,observacoes
+COM002,COM001,true,Consultas avancadas exigem dominio previo dos fundamentos de SQL.
+COM003,COM001,false,Recomenda-se conhecimento basico de SQL antes de modelagem dimensional.
+COM007,COM006,true,Modelagem no Power BI exige preparo previo dos dados com Power Query.
+COM005,COM007,true,DAX e mais eficaz apos compreender o modelo de dados no Power BI.
+COM009,COM008,false,Design de dashboards e facilitado apos dominar storytelling com dados.
