@@ -1,5 +1,0 @@
-complexidade_id,nome,descricao,peso,ordem,ativo
-CPL001,Iniciante,"Competencia adequada para quem esta comecando na area, sem experiencia previa.",1,1,true
-CPL002,Intermediario,Competencia que exige conhecimento previo basico e alguma pratica.,2,2,true
-CPL003,Avancado,Competencia que exige experiencia solida e dominio de conceitos anteriores.,3,3,true
-CPL004,Especialista,"Competencia de alta profundidade tecnica, voltada a especialistas na area.",4,4,true
