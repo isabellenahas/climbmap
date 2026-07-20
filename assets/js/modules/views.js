@@ -5,8 +5,8 @@ import { ui, escapeHtml, escapeAttribute } from "../components/ui.js";
 import { exportTechnicalBackup, importTechnicalBackup } from "../services/backup-service.js";
 import { configService } from "../services/config-service.js";
 import { dataService } from "../services/data-service.js";
-import { userDataService } from "../services/user-data-service.js?v=2.7.1";
-import { businessEngine } from "../business/business-engine.js?v=2.7.1";
+import { userDataService } from "../services/user-data-service.js?v=2.7.2";
+import { businessEngine } from "../business/business-engine.js?v=2.7.2";
 
 export function renderRoute(route, container) {
   const renderers = { mapa: renderMap, catalogo: renderCatalog, trilhas: renderTrails, planejamento: renderPlanning, evolucao: renderEvolution, perfil: renderProfile, administracao: renderAdministration };
@@ -384,7 +384,39 @@ function trailGroup(title, description, trails, selected, tone) {
 }
 function competencyStatusLabel(status){return ({stand_by:"Stand by",em_aberto:"Em aberto",em_andamento:"Em andamento",concluido:"Concluído",cancelado:"Cancelado"})[status]||"Fora do planejamento";}
 function resourceStatusLabel(status){return ({em_aberto:"Em aberto",em_andamento:"Em andamento",concluido:"Concluído",cancelado:"Cancelado"})[status]||"Sem status";}
-function competencyPlanningOptions(selected=""){return [["","Fora do planejamento"],["stand_by","Stand by"],["em_aberto","Em aberto"],["em_andamento","Em andamento"],["concluido","Concluído"],["cancelado","Cancelado"]].map(([v,l])=>`<option value="${v}" ${v===selected?"selected":""}>${l}</option>`).join("");}
-function resourceStatusOptions(selected=""){return [["","Sem status"],["em_aberto","Em aberto"],["em_andamento","Em andamento"],["concluido","Concluído"],["cancelado","Cancelado"]].map(([v,l])=>`<option value="${v}" ${v===selected?"selected":""}>${l}</option>`).join("");}
+function competencyPlanningOptions(selected = "") {
+  const options = [
+    ["", "Fora do planejamento"],
+    ["stand_by", "Stand by"],
+    ["em_aberto", "Em aberto"],
+    ["em_andamento", "Em andamento"],
+    ["concluido", "Concluído"],
+    ["cancelado", "Cancelado"]
+  ];
+
+  return options
+    .map(([value, label]) => {
+      const selectedAttribute = value === selected ? " selected" : "";
+      return `<option value="${escapeAttribute(value)}"${selectedAttribute}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
+
+function resourceStatusOptions(selected = "") {
+  const options = [
+    ["", "Sem status"],
+    ["em_aberto", "Em aberto"],
+    ["em_andamento", "Em andamento"],
+    ["concluido", "Concluído"],
+    ["cancelado", "Cancelado"]
+  ];
+
+  return options
+    .map(([value, label]) => {
+      const selectedAttribute = value === selected ? " selected" : "";
+      return `<option value="${escapeAttribute(value)}"${selectedAttribute}>${escapeHtml(label)}</option>`;
+    })
+    .join("");
+}
 function safeNumber(value){const number=Number(value);return Number.isFinite(number)?number:0;}
 function countResources(c){return c.niveis.reduce((s,l)=>s+l.recursos.length,0);} function categoryBar(c,p=0){return `<div class="category-progress"><div><strong>${escapeHtml(c.nome)}</strong><span>${p}%</span></div>${ui.progress(p,`${c.nome}: ${p}%`)}</div>`;} function byOrder(a,b){return Number(a.ordem||0)-Number(b.ordem||0);}
