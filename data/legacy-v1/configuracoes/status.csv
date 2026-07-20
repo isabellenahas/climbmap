@@ -1,7 +1,0 @@
-status_id,contexto,nome,descricao,ordem,ativo
-STA001,recurso,Tenho interesse,"Usuario demonstrou interesse no recurso, mas ainda nao iniciou.",1,true
-STA002,recurso,Estou estudando,Usuario esta em andamento com o recurso.,2,true
-STA003,recurso,Estou certificando,Usuario esta em processo de obtencao de certificacao.,3,true
-STA004,recurso,Concluido,Usuario concluiu o recurso.,4,true
-STA005,planejamento,Pausado,Item pausado temporariamente no planejamento do usuario.,5,true
-STA006,geral,Nao aplicavel,Status utilizado quando o acompanhamento nao se aplica ao item.,6,true

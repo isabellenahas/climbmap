@@ -1,6 +1,0 @@
-﻿ID,Tipo_Item_Origem,ID_Item_Origem,Tipo_Item_Pre_Requisito,ID_Item_Pre_Requisito,Classificacao,Obrigatorio,Motivo,ID_Fonte,Ativo,Observacoes
-PRE001,COMPETENCIA,COM002,COMPETENCIA,COM001,DOCUMENTADO,true,Consultas avancadas exigem dominio previo dos fundamentos de SQL.,,True,
-PRE002,COMPETENCIA,COM003,COMPETENCIA,COM001,DOCUMENTADO,false,Recomenda-se conhecimento basico de SQL antes de modelagem dimensional.,,True,
-PRE003,COMPETENCIA,COM007,COMPETENCIA,COM006,DOCUMENTADO,true,Modelagem no Power BI exige preparo previo dos dados com Power Query.,,True,
-PRE004,COMPETENCIA,COM005,COMPETENCIA,COM007,DOCUMENTADO,true,DAX e mais eficaz apos compreender o modelo de dados no Power BI.,,True,
-PRE005,COMPETENCIA,COM009,COMPETENCIA,COM008,DOCUMENTADO,false,Design de dashboards e facilitado apos dominar storytelling com dados.,,True,
